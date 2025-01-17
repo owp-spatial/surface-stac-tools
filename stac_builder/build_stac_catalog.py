@@ -45,7 +45,7 @@ class DatasetInfo:
             
         self.is_vrt = Path(self.path).suffix.lower() == ".vrt"
 
-def initialize_root_catalog(
+def init_root_catalog(
     catalog_dir: str,
     title: str = "Geospatial Data Catalog",
     description: str = "Comprehensive catalog of geospatial datasets"
@@ -237,7 +237,7 @@ def main():
     catalog_dir = os.path.join(base_dir, "geospatial-stac")
     
     # initialize root catalog
-    catalog = initialize_root_catalog(
+    catalog = init_root_catalog(
         catalog_dir=catalog_dir,
         title="Multi-Source Geospatial Data Catalog",
         description="Comprehensive catalog of DEM and other geospatial datasets from various providers"
