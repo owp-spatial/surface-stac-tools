@@ -1,256 +1,271 @@
 import os
+from pathlib import Path
+import typing
+from typing import Dict, List, Optional
 
 import pystac 
 from pystac import Catalog, Collection, Item, Asset, MediaType, Extent, SpatialExtent, TemporalExtent
 
 from catalog_manager.catalog_loader import get_catalog_loader, CatalogDataLoader
 from catalog_manager.collection_manager import CollectionManager
+from catalog_manager.item_manager import AbstractItemFactory, ItemFactoryManager, RasterItemFactory, VRTItemFactory
 from catalog_manager.catalog_extents import GenericExtent
+from catalog_manager.stac_metadata import Metadata, MetaDataExtractorFactory
 
 import config.settings as settings
 
 class CatalogManager:
-
     def __init__(self, 
-                 path :str, 
-                 catalog_loader : CatalogDataLoader
+                 catalog_path: str, 
+                 catalog_loader: CatalogDataLoader,
+                 metadata_extractor_factory: MetaDataExtractorFactory = None
                  ):
-        self.path = path
+        self.catalog_path = catalog_path
         self.catalog_loader = catalog_loader
         self.catalog = None
+        
+        # Initialize factories
+        self.metadata_extractor_factory = metadata_extractor_factory or MetaDataExtractorFactory()
+        self.item_factory_manager = ItemFactoryManager(self.metadata_extractor_factory)
+        
         self._load_or_create_catalog()
 
-    # Initializes catalog (Loads or creates catalog)
     def _load_or_create_catalog(self) -> None:
-
         try:
             self.catalog = self.catalog_loader.load_catalog()
         except:
             self.catalog = self._create_root_catalog()
-        
         return 
                     
     def _create_root_catalog(self) -> pystac.Catalog:
-        root_catalog_id   = "root-catalog"
+        root_catalog_id = "root-catalog"
         root_catalog_desc = "STAC Root Catalog description" 
-        root_catalog      = pystac.Catalog(
+        root_catalog = pystac.Catalog(
             id=root_catalog_id, 
             description=root_catalog_desc,
-            href=self.path
-            )
+            href=self.catalog_path,
+            catalog_type=pystac.CatalogType.SELF_CONTAINED
+        )
         return root_catalog
     
     def get_catalog(self) -> pystac.Catalog:
         return self.catalog
     
     def add_child_collection(self, 
-                            collection_id:str, 
-                            title: str ,
-                            description : str,
-                            extent : Extent = None
-                            ) -> None:
+                           collection_id: str, 
+                           title: str,
+                           description: str,
+                           extent: Extent = None
+                           ) -> None:
         collection = CollectionManager(
             collection_id=collection_id,
             title=title,
             description=description,
             extent=extent
-            )
-        self.catalog.add_child(collection.get_collection())
+        )
+
+        # check if collection is already present
+        if not self._collection_exists(collection_id): 
+            self.catalog.add_child(collection.get_collection())
+
         return 
 
-
-
-
-
-import os
-from abc import ABC, abstractmethod
-import json
-import urllib.request
-from datetime import datetime, timezone
-from dataclasses import dataclass
-from typing import List, Optional, Dict, Any
-
-import rasterio
-import pystac
-from pystac import MediaType
-from pathlib import Path
-import uuid
-
-from shapely.geometry import Polygon, mapping
-from catalog_manager.constants import FILE_EXT_TO_MEDIA_TYPE
-
-class Metadata:
-    """
-    Class to hold metadata attributes in a flexible manner.
-    Attributes are stored as key-value pairs in a dictionary.
-    """
-
-    def __init__(self, **kwargs):
+    def add_item_to_collection(self, 
+                   collection_id: str,
+                   data_path: str,
+                   **kwargs) -> pystac.Item:
         """
-        Initialize Metadata with dynamic attributes.
-        The kwargs allow passing arbitrary attributes.
-        """
-        self.metadata = kwargs
-
-    def get(self, key, default = None) -> Any:
-        """
-        Get the value of a specific metadata attribute.
-        """
-        return self.metadata.get(key, default)
-
-    def set(self, key, value) -> None:
-        """
-        Set the value of a specific metadata attribute.
-        """
-        self.metadata[key] = value
-
-    def __repr__(self):
-        return f"Metadata({self.metadata})"
-
-# Abstract Base Class for Metadata Extractors
-class MetaDataExtractor(ABC):
-    """
-    Abstract base class for metadata extraction.
-    """
-
-    def __init__(self, file_path: str):
-        self.file_path = file_path
-
-    @abstractmethod
-    def extract_metadata(self):
-        """
-        Abstract method to extract metadata from the file.
-        """
-        pass
-
-    @classmethod
-    def get_media_type(cls, file_path: str) -> MediaType:
-        """
-        Infers the pystac.MediaType enum based on the file extension.
-
+        Create a STAC Item and add it to the specified collection.
+        Data type is inferred from the file extension.
+        
         Args:
-            file_path (str): The path or name of the file.
-
+            collection_id (str): ID of the collection to add the item to
+            data_path (str): Path to the data file
+            **kwargs: Additional arguments to pass to the item factory
+            
         Returns:
-            MediaType: The inferred MediaType enum value, or None if not matched.
+            pystac.Item: The created STAC Item
         """
-        # Get the file extension
-        _, ext = os.path.splitext(file_path)
-        ext = ext.lower()
-
-        # Return the corresponding MediaType enum or None if not found
-        return FILE_EXT_TO_MEDIA_TYPE.get(ext)
-
-
-# Concrete Class for TIF Files
-class TIFMetaData(MetaDataExtractor):
-    """
-    Metadata extraction for TIF files using rasterio.
-    """
-
-    def extract_metadata(self):
-        """
-        Extract metadata from a VRT file.
-        Returns: (bbox, mapping(footprint), vrt_files)
-        """
-
-        # Assuming you have a way to open and read VRT metadata, e.g., using rasterio
-        with rasterio.open(self.file_path) as src:
+        # Infer data type from file extension
+        data_type = Path(data_path).suffix.lower().lstrip('.')
+        
+        try:
+            # Get the appropriate factory
+            factory = self.item_factory_manager.get_item_factory(data_type)
             
-            bbox = self.get_bbox(src)
-            footprint = self.get_footprint(src)
-            media_type = self.get_media_type(self.file_path)
-            # return bbox, footprint
-            # Return metadata in a flexible Metadata object
-            metadata = Metadata(bbox=bbox, geometry=footprint, media_type=media_type)
-            return metadata
-
-    def get_bbox(self, src : rasterio.DatasetReader) -> List[float]:
-        bbox = [src.bounds.left, src.bounds.bottom, src.bounds.right, src.bounds.top]
-        return bbox 
-        
-    def get_footprint(self, src : rasterio.DatasetReader) -> Dict[str, Any]:
-        """
-        Helper method to compute the footprint of the VRT file.
-        """
-        
-        bounds = src.bounds
-        footprint = Polygon([
-            [bounds.left, bounds.bottom],
-            [bounds.left, bounds.top],
-            [bounds.right, bounds.top],
-            [bounds.right, bounds.bottom]
-        ])
-
-        return mapping(footprint)
-
-# Concrete Class for VRT Files
-class VRTMetaData(MetaDataExtractor):
-    """
-    Metadata extraction for TIF files using rasterio.
-    """
-
-    def extract_metadata(self):
-        """
-        Extract metadata from a VRT file.
-        Returns: (bbox, mapping(footprint), vrt_files)
-        """
-
-        # Assuming you have a way to open and read VRT metadata, e.g., using rasterio
-        with rasterio.open(self.file_path) as src:
+            # Create the item
+            item = factory.create_item(data_path, **kwargs)
             
-            bbox = self.get_bbox(src)
-            footprint = self.get_footprint(src)
-            vrt_files = self.get_vrt_files(src)
-            media_type = self.get_media_type(self.file_path)
-            # return bbox, footprint, vrt_files
-            # Return metadata in a flexible Metadata object
-            metadata = Metadata(bbox=bbox, geometry=footprint, vrt_files=vrt_files, media_type=media_type)
-            return metadata
+            print(f"Item created: {item}")
+            # Find the collection and add the item
+            collection = self._find_collection(collection_id)
+            print(f"Collection found: {collection}")
+            print(f"Type of collection: {type(collection)}")
 
-    def get_bbox(self, src : rasterio.DatasetReader) -> List[float]:
-        bbox = [src.bounds.left, src.bounds.bottom, src.bounds.right, src.bounds.top]
-        return bbox 
+            if not collection:
+                raise ValueError(f"Collection not found: {collection_id}")
+
+            item.collection = collection.id 
+
+            collection.add_item(item)
+            return item
+            
+        except ValueError as e:
+            raise ValueError(f"Error creating item: {str(e)}")
+
+    def _find_collection(self, collection_id: str) -> Optional[pystac.Collection]:
+        """Find a collection in the catalog by ID"""
+        for child in self.catalog.get_children():
+            if isinstance(child, pystac.Collection) and child.id == collection_id:
+                return child
+        return None
+
+    def _collection_exists(self, collection_id: str) -> bool:
+        """Check if a collection exists in the catalog"""
+        for child in self.catalog.get_children():
+            if isinstance(child, pystac.Collection) and child.id == collection_id:
+                return True
+        return False
+
+    def get_supported_data_types(self) -> List[str]:
+        """Get list of supported data types"""
+        return self.item_factory_manager.get_supported_types()
+
+    def save_catalog(self) -> None:
+        """Save the catalog to disk"""
+        self.catalog.normalize_hrefs(self.catalog_path)
+        self.catalog.save(catalog_type=pystac.CatalogType.SELF_CONTAINED)
+        return
+
+def setup_catalog_manager(catalog_path: str, catalog_loader: CatalogDataLoader):
+    """Setup a catalog manager with default configurations"""
+    metadata_extractor_factory = MetaDataExtractorFactory()
+    
+    catalog_manager = CatalogManager(
+        catalog_path=catalog_path,
+        catalog_loader=catalog_loader,
+        metadata_extractor_factory=metadata_extractor_factory
+    )
+    
+    return catalog_manager
+
+# class CatalogManager:
+
+#     def __init__(self, 
+#                  catalog_path :str, 
+#                  catalog_loader : CatalogDataLoader,
+#                  metadata_extractor_factory: MetaDataExtractorFactory = None
+#                  ):
+#         self.catalog_path = catalog_path
+#         self.catalog_loader = catalog_loader
+#         self.catalog = None
         
-    def get_footprint(self, src : rasterio.DatasetReader) -> Dict[str, Any]:
-        """
-        Helper method to compute the footprint of the VRT file.
-        """
+#         # initialize factories
+#         self.metadata_extractor_factory = metadata_extractor_factory or MetaDataExtractorFactory()
+#         self._item_factories = self._init_item_factories()
         
-        bounds = src.bounds
-        footprint = Polygon([
-            [bounds.left, bounds.bottom],
-            [bounds.left, bounds.top],
-            [bounds.right, bounds.top],
-            [bounds.right, bounds.bottom]
-        ])
+#         # Load or create catalog
+#         self._load_or_create_catalog()
 
-        return mapping(footprint)
+#     def _init_item_factories(self) -> Dict[str, AbstractItemFactory]:
+#         """Initialize the item factories for different data types"""
+#         return {
+#             'raster': RasterItemFactory(self.metadata_extractor_factory),
+#             'vrt': VRTItemFactory(self.metadata_extractor_factory)
+#         }
+    
+#     # Initializes catalog (Loads or creates catalog)
+#     def _load_or_create_catalog(self) -> None:
 
-    def get_vrt_files(self, src) -> list[str]:
-        """
-        Assuming we extract a list of VRT files involved.
-        This would be a method to return the VRT-specific files.
-        """
-        # return {"files": src.files}
-        return src.files if src.files else []
- 
-# Factory class for metadata extractors
-class MetaDataExtractorFactory:
-    """
-    Factory to create appropriate metadata extractors based on file type.
-    """
-    # Add a mapping to associate file extensions with metadata extractors
-    _extractor_mapping = {
-        ".tif": TIFMetaData,
-        ".vrt": VRTMetaData,
-    }
+#         try:
+#             self.catalog = self.catalog_loader.load_catalog()
+#         except:
+#             self.catalog = self._create_root_catalog()
+        
+#         return 
+                    
+#     def _create_root_catalog(self) -> pystac.Catalog:
+#         root_catalog_id   = "root-catalog"
+#         root_catalog_desc = "STAC Root Catalog description" 
+#         root_catalog      = pystac.Catalog(
+#             id=root_catalog_id, 
+#             description=root_catalog_desc,
+#             href=self.catalog_path
+#             )
+#         return root_catalog
+    
+#     def get_catalog(self) -> pystac.Catalog:
+#         return self.catalog
+    
+#     def add_child_collection(self, 
+#                             collection_id:str, 
+#                             title: str ,
+#                             description : str,
+#                             extent : Extent = None
+#                             ) -> None:
+#         collection = CollectionManager(
+#             collection_id=collection_id,
+#             title=title,
+#             description=description,
+#             extent=extent
+#             )
+#         self.catalog.add_child(collection.get_collection())
+#         return 
+    
+#     def create_item(self, 
+#                     collection_id: str,
+#                     data_type: str,
+#                     data_path: str,
+#                     **kwargs) -> pystac.Item:
+#         """
+#         Create a new STAC Item and add it to the specified collection
+        
+#         Args:
+#             collection_id (str): ID of the collection to add the item to
+#             data_type (str): Type of data ('raster', 'vrt', etc.)
+#             data_path (str): Path to the data file
+#             **kwargs: Additional arguments to pass to the item factory
+        
+#         Returns:
+#             pystac.Item: The created STAC Item
+#         """
 
-    @staticmethod
-    def get_metadata_extractor(file_path: str) -> MetaDataExtractor:
-        file_extension = os.path.splitext(file_path)[-1].lower()
-        extractor_class = MetaDataExtractorFactory._extractor_mapping.get(file_extension)
+#         # validate data type
+#         if data_type not in self._item_factories:
+#             raise ValueError(f"Unsupported data type: {data_type}. Supported types: {list(self._item_factories.keys())}")
 
-        if not extractor_class:
-            raise ValueError(f"Unsupported file type: {file_extension}")
-        return extractor_class(file_path)
+#         # Get the appropriate factory
+#         factory = self._item_factories[data_type]
+
+#         # Create the item
+#         item = factory.create_item(data_path, **kwargs)
+
+#         # Find the collection and add the item
+#         collection = self._find_collection(collection_id)
+#         if collection is None:
+#             raise ValueError(f"Collection not found: {collection_id}")
+
+#         collection.add_item(item)
+#         return item
+
+#     def _find_collection(self, collection_id: str) -> Optional[pystac.Collection]:
+#         """Find a collection in the catalog by ID"""
+#         # Search through all children of the catalog
+#         for child in self.catalog.get_children():
+#             if isinstance(child, pystac.Collection) and child.id == collection_id:
+#                 return child
+#         return None
+
+#     def register_item_factory(self, data_type: str, factory: AbstractItemFactory) -> None:
+#         """
+#         Register a new item factory for a specific data type
+        
+#         Args:
+#             data_type (str): The type of data this factory handles
+#             factory (AbstractItemFactory): The factory instance
+#         """
+#         self._item_factories[data_type] = factory
+
+#     def get_supported_data_types(self) -> List[str]:
+#         """Get a list of supported data types"""
+#         return list(self._item_factories.keys())

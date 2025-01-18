@@ -13,8 +13,8 @@ class CatalogDataLoader(ABC):
     Abstract base class for loading STAC catalog json.
     """
 
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, catalog_path):
+        self.catalog_path = catalog_path
     
     @abstractmethod
     def load_catalog(self) -> pystac.Catalog:
@@ -23,7 +23,7 @@ class CatalogDataLoader(ABC):
 class LocalCatalogDataLoader(CatalogDataLoader):
 
     def load_catalog(self) -> pystac.Catalog:
-        return pystac.Catalog.from_file(self.path)
+        return pystac.Catalog.from_file(self.catalog_path)
 
 class RemoteCatalogDataLoader(CatalogDataLoader):
     """
@@ -35,10 +35,10 @@ class RemoteCatalogDataLoader(CatalogDataLoader):
         :return: An instance of pystac.Catalog.
         """
         # Ensure HTTP requests are allowed (e.g., using settings or additional configurations)
-        if not self.path.startswith("http"):
-            raise ValueError("The path must be a valid URL for a remote catalog.")
+        if not self.catalog_path.startswith("http"):
+            raise ValueError("The catalog_path must be a valid URL for a remote catalog.")
 
-        return pystac.Catalog.from_url(self.path)
+        return pystac.Catalog.from_url(self.catalog_path)
 
 class CatalogLoaderFactory:
     """
@@ -52,26 +52,28 @@ class CatalogLoaderFactory:
     }
 
     @staticmethod
-    def create_loader(path: str) -> CatalogDataLoader:
+    def create_loader(catalog_path: str) -> CatalogDataLoader:
         """
-        Create an appropriate CatalogDataLoader instance based on the path type.
-        :param path: The path or URL to the catalog.
+        Create an appropriate CatalogDataLoader instance based on the catalog_path type.
+        :param catalog_path: The catalog_path or URL to the catalog.
         :return: An instance of CatalogDataLoader.
         """
         for protocol, loader_class in CatalogLoaderFactory.loader_classes.items():
-            if path.startswith(protocol):
-                return loader_class(path)
-        
-        raise ValueError(f"No suitable loader found for path: {path}")
+            if catalog_path.startswith(protocol):
+                return loader_class(catalog_path)
+    
+        return LocalCatalogDataLoader(catalog_path)
+     
+        # raise ValueError(f"No suitable loader found for catalog_path: {catalog_path}")
 
 # TODO: make this dynamically get the correct CatalogDataLoader
-def get_catalog_loader(path: str) -> CatalogDataLoader:
+def get_catalog_loader(catalog_path: str) -> CatalogDataLoader:
     """
-    Factory method to return the appropriate CatalogDataLoader implementation based on the path.
-    :param path: The path or URL to the catalog.
+    Factory method to return the appropriate CatalogDataLoader implementation based on the catalog_path.
+    :param catalog_path: The catalog_path or URL to the catalog.
     :return: An instance of CatalogDataLoader.
     """
-    # if path.startswith("http"):
-        # return RemoteCatalogDataLoader(path)
+    # if catalog_path.startswith("http"):
+        # return RemoteCatalogDataLoader(catalog_path)
     # else:
-    return LocalCatalogDataLoader(path)
+    return LocalCatalogDataLoader(catalog_path)
