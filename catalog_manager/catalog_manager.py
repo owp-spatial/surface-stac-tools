@@ -38,18 +38,37 @@ class CatalogManager:
         return 
                     
     def _create_root_catalog(self) -> pystac.Catalog:
-        root_catalog_id = "root-catalog"
+        root_catalog_id   = "root-catalog"
         root_catalog_desc = "STAC Root Catalog description" 
         root_catalog = pystac.Catalog(
             id=root_catalog_id, 
             description=root_catalog_desc,
-            href=self.catalog_path,
+            # href=self.catalog_path,
             catalog_type=pystac.CatalogType.SELF_CONTAINED
         )
         return root_catalog
     
     def get_catalog(self) -> pystac.Catalog:
         return self.catalog
+    
+    def set_catalog_title(self, title: str) -> None:
+        self.catalog.title = title
+        return
+    
+    def set_catalog_description(self, description: str) -> None:
+        self.catalog.description = description
+        return
+
+    def describe(self) -> None:
+        self.catalog.describe()
+        return 
+    
+
+    def get_children(self):
+        return self.catalog.get_children()
+    
+    def get_items(self):
+        return self.catalog.get_items()
     
     def add_child_collection(self, 
                            collection_id: str, 
@@ -73,7 +92,7 @@ class CatalogManager:
     def add_item_to_collection(self, 
                    collection_id: str,
                    data_path: str,
-                   **kwargs) -> pystac.Item:
+                   **kwargs) -> None:
         """
         Create a STAC Item and add it to the specified collection.
         Data type is inferred from the file extension.
@@ -84,7 +103,7 @@ class CatalogManager:
             **kwargs: Additional arguments to pass to the item factory
             
         Returns:
-            pystac.Item: The created STAC Item
+            None
         """
         # Infer data type from file extension
         data_type = Path(data_path).suffix.lower().lstrip('.')
@@ -106,12 +125,22 @@ class CatalogManager:
                 raise ValueError(f"Collection not found: {collection_id}")
 
             item.collection = collection.id 
-
+            # Add item to collection and update extent basd on items
             collection.add_item(item)
-            return item
+            collection.update_extent_from_items()
+
+            # return item
+            return 
             
         except ValueError as e:
             raise ValueError(f"Error creating item: {str(e)}")
+
+    def update_all_collection_extents(self) -> None:
+        """Update the spatial and temporal extents of all collections"""
+        for child in self.catalog.get_children():
+            if isinstance(child, pystac.Collection):
+                child.update_extent_from_items()
+        return
 
     def _find_collection(self, collection_id: str) -> Optional[pystac.Collection]:
         """Find a collection in the catalog by ID"""
@@ -131,10 +160,15 @@ class CatalogManager:
         """Get list of supported data types"""
         return self.item_factory_manager.get_supported_types()
 
-    def save_catalog(self) -> None:
+    def save_catalog(self, catalog_type : pystac.CatalogType = pystac.CatalogType.SELF_CONTAINED) -> None:
         """Save the catalog to disk"""
+        if not isinstance(catalog_type, pystac.CatalogType):
+            raise ValueError(f"Invalid catalog type: {catalog_type}, expected pystac.CatalogType")
+
+        self.update_all_collection_extents()
+
         self.catalog.normalize_hrefs(self.catalog_path)
-        self.catalog.save(catalog_type=pystac.CatalogType.SELF_CONTAINED)
+        self.catalog.save(catalog_type=catalog_type)
         return
 
 def setup_catalog_manager(catalog_path: str, catalog_loader: CatalogDataLoader):

@@ -34,6 +34,10 @@ class CollectionManager:
     
     def get_collection(self) -> pystac.Collection:
         return self.collection
+    
+    def update_extent_from_items(self) -> None:
+        self.collection.update_extent_from_items()
+        return 
 
 # class CollectionManager:
 

@@ -4,7 +4,14 @@ import json
 import urllib.request
 from datetime import datetime, timezone
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple, Union
+from enum import Enum
+import warnings 
+
+import rasterio
+
+from rasterio.crs import CRS
+from rasterio.transform import from_bounds
 
 import rasterio
 import pystac
@@ -14,6 +21,15 @@ import uuid
 
 from shapely.geometry import Polygon, mapping
 from catalog_manager.constants import FILE_EXT_TO_MEDIA_TYPE
+
+# Import extension version
+import rio_stac
+
+# from rio_stac.stac import PROJECTION_EXT_VERSION
+# # Import rio_stac methods
+# from rio_stac.stac import (
+#     get_projection_info
+# )
 
 class Metadata:
     """
@@ -76,6 +92,20 @@ class MetaDataExtractor(ABC):
 
         # Return the corresponding MediaType enum or None if not found
         return FILE_EXT_TO_MEDIA_TYPE.get(ext)
+    
+    @classmethod
+    def get_proj_ext_properties(self, src) -> dict:
+        """Update the properties dictionary with the metadata from the dataset."""
+        return {
+                    f"proj:{name}": value
+                    for name, value in rio_stac.stac.get_projection_info(src).items()
+                    }
+
+    @classmethod
+    def get_proj_ext_path(self) -> str:
+        """Return the path to the projection extension schema."""
+        return f"https://stac-extensions.github.io/projection/{rio_stac.stac.PROJECTION_EXT_VERSION}/schema.json"
+
 
 
 # Concrete Class for TIF Files
@@ -89,6 +119,8 @@ class TIFMetaData(MetaDataExtractor):
         Extract metadata from a VRT file.
         Returns: (bbox, mapping(footprint), vrt_files)
         """
+        properties = {} 
+        stac_extensions = []
 
         # Assuming you have a way to open and read VRT metadata, e.g., using rasterio
         with rasterio.open(self.file_path) as src:
@@ -96,9 +128,22 @@ class TIFMetaData(MetaDataExtractor):
             bbox = self.get_bbox(src)
             footprint = self.get_footprint(src)
             media_type = self.get_media_type(self.file_path)
+
+            # Add projection extension properties            
+            proj_ext_props = self.get_proj_ext_properties(src)
+            properties.update(proj_ext_props)
+
+            # add the projection extension schema path
+            stac_extensions.append(self.get_proj_ext_path())
+
             # return bbox, footprint
             # Return metadata in a flexible Metadata object
-            metadata = Metadata(bbox=bbox, geometry=footprint, media_type=media_type)
+            metadata = Metadata(bbox=bbox, 
+                                geometry=footprint, 
+                                media_type=media_type, 
+                                properties=properties, 
+                                stac_extensions=stac_extensions
+                                )
             return metadata
 
     def get_bbox(self, src : rasterio.DatasetReader) -> List[float]:
@@ -131,6 +176,8 @@ class VRTMetaData(MetaDataExtractor):
         Extract metadata from a VRT file.
         Returns: (bbox, mapping(footprint), vrt_files)
         """
+        properties = {} 
+        stac_extensions = []
 
         # Assuming you have a way to open and read VRT metadata, e.g., using rasterio
         with rasterio.open(self.file_path) as src:
@@ -139,9 +186,22 @@ class VRTMetaData(MetaDataExtractor):
             footprint = self.get_footprint(src)
             vrt_files = self.get_vrt_files(src)
             media_type = self.get_media_type(self.file_path)
+
+            # Add projection extension properties
+            proj_ext_props = self.get_proj_ext_properties(src)
+            properties.update(proj_ext_props)
+
+            # add the projection extension schema path
+            stac_extensions.append(self.get_proj_ext_path())
+            
             # return bbox, footprint, vrt_files
             # Return metadata in a flexible Metadata object
-            metadata = Metadata(bbox=bbox, geometry=footprint, vrt_files=vrt_files, media_type=media_type)
+            metadata = Metadata(bbox=bbox, 
+                                geometry=footprint, 
+                                vrt_files=vrt_files, 
+                                media_type=media_type, 
+                                properties=properties, 
+                                stac_extensions=stac_extensions)
             return metadata
 
     def get_bbox(self, src : rasterio.DatasetReader) -> List[float]:
