@@ -35,22 +35,9 @@ class CollectionManager:
     def get_collection(self) -> pystac.Collection:
         return self.collection
     
+    def get_item(self, id :str, recursive:bool = False) -> pystac.Item:
+        return self.collection.get_item(id, recursive)
+
     def update_extent_from_items(self) -> None:
         self.collection.update_extent_from_items()
         return 
-
-# class CollectionManager:
-
-#     def __init__(self, 
-#                  path:str
-#                  ):
-#         self.path = path 
-#         # self.collection_id = collection_id
-#         # self.title = title
-#         # self.description = description
-#         # self.extent = extent
-#         # self.collection = None
-#         # self.create_collection()
-    
-#     def path_to_collection_id(self) -> str:
-#         return self.collection_id

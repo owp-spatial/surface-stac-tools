@@ -18,6 +18,7 @@ CATALOG_URI = os.path.join(BASE_DIR, CATALOG_DIR, ROOT_CATALOG_NAME)
 # CATALOG_URI = f"{BASE_DIR}/{CATALOG_DIR}/{ROOT_CATALOG_NAME}"
 
 # Name data for the root STAC catalog
+ROOT_CATALOG_ID = "hydrofabric-surfaces"
 ROOT_CATALOG_TITLE = "Hydrofabric Surfaces STAC Catalog"
 ROOT_CATALOG_DESCRIPTION = "A STAC catalog containing diverse hydrologic surfaces"
 

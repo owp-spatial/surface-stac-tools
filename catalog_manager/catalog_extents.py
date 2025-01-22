@@ -4,52 +4,12 @@ from typing import Dict, List, Optional, Union
 import pystac
 from pystac import Catalog, Collection, Item, Asset, MediaType, Extent, SpatialExtent, TemporalExtent
 
-def get_current_temporal_interval() -> list[datetime, datetime]:
-    """
-    Update the temporal interval with a new datetime value.
-    Ensures datetime is timezone-aware.
-    """
-    datetime_value = datetime.now(timezone.utc)
-
-    # Make datetime timezone-aware if it isn't already
-    if datetime_value.tzinfo is None:
-        datetime_value = datetime_value.replace(tzinfo=timezone.utc)
-        
-    temporal_interval = None
-
-    if temporal_interval is None:
-        temporal_interval = [datetime_value, datetime_value]
-    else:
-        temporal_interval = [
-            min(temporal_interval[0], datetime_value),
-            max(temporal_interval[1], datetime_value)
-        ]
-    return temporal_interval
-
 class GenericExtent:
 
     def __init__(self, bbox = None, temporal_interval = None):
         self.bbox = bbox
         self.temporal_interval = temporal_interval
     
-    # def get_current_temporal_interval(self) -> list[datetime, datetime]:
-    #     """
-    #     Update the temporal interval with a new datetime value.
-    #     Ensures datetime is timezone-aware.
-    #     """
-    #     datetime_value = datetime.now(timezone.utc)
-    #     # Make datetime timezone-aware if it isn't already
-    #     if datetime_value.tzinfo is None:
-    #         datetime_value = datetime_value.replace(tzinfo=timezone.utc)
-    #     if self.temporal_interval is None:
-    #         self.temporal_interval = [datetime_value, datetime_value]
-    #     # else:
-    #         # self.temporal_interval = [
-    #             # min(self.temporal_interval[0], datetime_value),
-    #             # max(self.temporal_interval[1], datetime_value)
-    #         # ]
-    #     return self.temporal_interval
-
     def get_extent(self) -> Extent:
         """
         Build a PySTAC Extent object.
@@ -83,6 +43,27 @@ class GenericExtent:
             )
         )
 
+def get_current_temporal_interval() -> list[datetime, datetime]:
+    """
+    Update the temporal interval with a new datetime value.
+    Ensures datetime is timezone-aware.
+    """
+    datetime_value = datetime.now(timezone.utc)
+
+    # Make datetime timezone-aware if it isn't already
+    if datetime_value.tzinfo is None:
+        datetime_value = datetime_value.replace(tzinfo=timezone.utc)
+        
+    temporal_interval = None
+
+    if temporal_interval is None:
+        temporal_interval = [datetime_value, datetime_value]
+    else:
+        temporal_interval = [
+            min(temporal_interval[0], datetime_value),
+            max(temporal_interval[1], datetime_value)
+        ]
+    return temporal_interval
 # import os
 
 # from stac_builder.stac_metadata import MetaDataExtractorFactory

@@ -6,6 +6,10 @@ from pystac import MediaType
 # VRT_URI = "/vsicurl/https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/USGS_Seamless_DEM_1.vrt"
 # CATALOG_DIR = os.path.join(BASE_DIR, "hydrofabric-stac")
 
+DEFAULT_ROOT_CATALOG_ID    = "root-catalog"
+DEFAULT_ROOT_CATALOG_TITLE = f"{DEFAULT_ROOT_CATALOG_ID}-title"
+DEFAULT_ROOT_CATALOG_DESC  = f"{DEFAULT_ROOT_CATALOG_ID}-desc" 
+
 # mapping common file extensions to PySTAC MediaType enums
 FILE_EXT_TO_MEDIA_TYPE = {
     ".tif": MediaType.COG,  

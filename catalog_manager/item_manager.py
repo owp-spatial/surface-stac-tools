@@ -37,7 +37,6 @@ class RasterItemFactory(AbstractItemFactory):
         self.metadata_extractor = metadata_extractor
 
     def create_item(self, data_path: str, **kwargs) -> pystac.Item:
-        # return super().create_item(data_path, **kwargs)
         extractor = self.metadata_extractor.get_metadata_extractor(data_path)
         metadata = extractor.extract_metadata()
         
@@ -45,15 +44,15 @@ class RasterItemFactory(AbstractItemFactory):
         item_id = kwargs.get("item_id", self._get_file_name(data_path))
         # item_id = kwargs.get('item_id', str(uuid.uuid4()))
         
-        
         item = pystac.Item(
             id=item_id,
             geometry=metadata.get('geometry'),
             bbox=metadata.get('bbox'),
             stac_extensions=metadata.get('stac_extensions', []),
             datetime=kwargs.get('datetime', datetime.now()),
+            properties={**kwargs.get('properties', {}), **metadata.get('properties', {})}
+            # properties=metadata.get('properties', {})
             # properties=kwargs.get('properties', {})
-            properties=metadata.get('properties', {})
         )
 
         # add aseets to items
@@ -68,7 +67,6 @@ class RasterItemFactory(AbstractItemFactory):
         extractor = self.metadata_extractor.get_metadata_extractor(data_path)
         metadata = extractor.extract_metadata()
         
-        print(f"create_assets - metadata: {metadata}")
         # Use the filename without extension as the asset key
         # if not possible, just use the data_path
         try:
@@ -86,19 +84,6 @@ class RasterItemFactory(AbstractItemFactory):
             )
         }
     
-    # def create_assets(self, data_path: str) -> Dict[str, pystac.Asset]:
-    #     extractor = self.metadata_extractor.get_metadata_extractor(data_path)
-    #     metadata = extractor.extract_metadata()
-
-    #     return {
-    #         'data' : pystac.Asset(
-    #             href=data_path,
-    #             media_type=metadata.get('media_type'),
-    #             roles=['data']
-    #         )
-    #     }
-    #     # return super().create_asset(data_path)
-
 class VRTItemFactory(AbstractItemFactory):
     """Concrete factory for creating STAC Items from VRT data"""
     
@@ -117,28 +102,23 @@ class VRTItemFactory(AbstractItemFactory):
         
         # Create item with VRT-specific properties
         properties = metadata.get('properties', {})
-        # properties = kwargs.get('properties', {})
         properties.update({
             'vrt:source_count': len(metadata.get('vrt_files', [])),
             'vrt:type': 'mosaic'  # Could be parameterized based on VRT type
         })
-        
         item = pystac.Item(
             id=item_id,
             geometry=metadata.get('geometry'),
             bbox=metadata.get('bbox'),
             stac_extensions=metadata.get('stac_extensions', []),
             datetime=kwargs.get('datetime', datetime.now()),
-            properties=properties
+            properties={**kwargs.get('properties', {}), **properties} 
+            # properties=properties
         )
         
         # Add assets to item
         assets = self.create_assets(data_path)
-        print(f"Len assets: {len(assets)}")
-
         for asset_key, asset in assets.items():
-            print(f"asset_key: {asset_key}")
-
             item.add_asset(asset_key, asset)
             
         return item
@@ -158,14 +138,8 @@ class VRTItemFactory(AbstractItemFactory):
         
         # Add source files as separate assets
         vrt_files = metadata.get('vrt_files', [])
-        print(f"META: {metadata}")
-        # print(f"vrt_files: {vrt_files}")
-
         for idx, source_file in enumerate(vrt_files):
-            # print(f"source_file: {source_file}")
-            # print(f"idx: {idx}")
             media_type = MetaDataExtractor.get_media_type(source_file)
-            # print(f"media_type: {media_type}")
             
             try:
                 asset_key = self._get_file_name(source_file)
@@ -183,7 +157,6 @@ class VRTItemFactory(AbstractItemFactory):
                 # description=f'Source file {idx + 1} referenced by the VRT'
             )
         
-        # print(f"assets: {assets}")
         return assets
 
 class ItemFactoryManager:
@@ -193,6 +166,7 @@ class ItemFactoryManager:
     """
     _factory_mapping = {
         "tif": RasterItemFactory,
+        "tiff": RasterItemFactory,
         "vrt": VRTItemFactory
     }
 

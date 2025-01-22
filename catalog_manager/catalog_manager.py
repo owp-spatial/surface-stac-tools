@@ -6,22 +6,29 @@ from typing import Dict, List, Optional
 import pystac 
 from pystac import Catalog, Collection, Item, Asset, MediaType, Extent, SpatialExtent, TemporalExtent
 
-from catalog_manager.catalog_loader import get_catalog_loader, CatalogDataLoader
+from catalog_manager.catalog_loader import get_catalog_loader, CatalogDataLoader, CatalogLoaderFactory
 from catalog_manager.collection_manager import CollectionManager
 from catalog_manager.item_manager import AbstractItemFactory, ItemFactoryManager, RasterItemFactory, VRTItemFactory
 from catalog_manager.catalog_extents import GenericExtent
 from catalog_manager.stac_metadata import Metadata, MetaDataExtractorFactory
+from catalog_manager.constants import DEFAULT_ROOT_CATALOG_ID, \
+        DEFAULT_ROOT_CATALOG_TITLE, \
+        DEFAULT_ROOT_CATALOG_DESC
 
 import config.settings as settings
 
 class CatalogManager:
     def __init__(self, 
                  catalog_path: str, 
-                 catalog_loader: CatalogDataLoader,
+                 id: Optional[str] = None,
+                 title: Optional[str] = None,
+                 description: Optional[str] = None,
+                 catalog_loader: CatalogDataLoader = None,
                  metadata_extractor_factory: MetaDataExtractorFactory = None
                  ):
         self.catalog_path = catalog_path
-        self.catalog_loader = catalog_loader
+        self.catalog_loader = catalog_loader or CatalogLoaderFactory.create_loader(self.catalog_path)
+        # self.catalog_loader = catalog_loader
         self.catalog = None
         
         # Initialize factories
@@ -29,6 +36,12 @@ class CatalogManager:
         self.item_factory_manager = ItemFactoryManager(self.metadata_extractor_factory)
         
         self._load_or_create_catalog()
+
+        # set any metadata if provided
+        # self._set_catalog_metadata(id, title, description)
+        self.set_catalog_id(id)
+        self.set_catalog_title(title)
+        self.set_catalog_description(description)
 
     def _load_or_create_catalog(self) -> None:
         try:
@@ -38,25 +51,48 @@ class CatalogManager:
         return 
                     
     def _create_root_catalog(self) -> pystac.Catalog:
-        root_catalog_id   = "root-catalog"
-        root_catalog_desc = "STAC Root Catalog description" 
         root_catalog = pystac.Catalog(
-            id=root_catalog_id, 
-            description=root_catalog_desc,
+            id=DEFAULT_ROOT_CATALOG_ID, 
+            description=DEFAULT_ROOT_CATALOG_DESC,
             # href=self.catalog_path,
             catalog_type=pystac.CatalogType.SELF_CONTAINED
         )
         return root_catalog
     
+    # def _set_catalog_metadata(self, id: Optional[str], title: Optional[str], description: Optional[str]) -> None:
+    #     """Set ID, title, and description if provided or not already set."""
+    #     # Set catalog ID
+    #     if not self.catalog.id and id:
+    #         self.set_catalog_id(id)
+    #     elif not self.catalog.id:
+    #         self.set_catalog_id(DEFAULT_ROOT_CATALOG_ID)
+
+    #     if not self.catalog.title and title:
+    #         self.set_catalog_title(title)
+    #     elif not self.catalog.title:
+    #         self.set_catalog_title(DEFAULT_ROOT_CATALOG_TITLE)
+
+    #     if not self.catalog.description and description:
+    #         self.set_catalog_description(description)
+    #     elif not self.catalog.description:
+    #         self.set_catalog_description(DEFAULT_ROOT_CATALOG_DESC)
+    
     def get_catalog(self) -> pystac.Catalog:
         return self.catalog
+
+    def set_catalog_id(self, id: str) -> None:
+        if self.catalog and id:
+            self.catalog.id = id
+        return 
     
     def set_catalog_title(self, title: str) -> None:
-        self.catalog.title = title
+        if self.catalog and title:
+            self.catalog.title = title
         return
     
     def set_catalog_description(self, description: str) -> None:
-        self.catalog.description = description
+        if self.catalog and description:
+            self.catalog.description = description
         return
 
     def describe(self) -> None:
@@ -115,16 +151,15 @@ class CatalogManager:
             # Create the item
             item = factory.create_item(data_path, **kwargs)
             
-            print(f"Item created: {item}")
             # Find the collection and add the item
             collection = self._find_collection(collection_id)
-            print(f"Collection found: {collection}")
-            print(f"Type of collection: {type(collection)}")
 
             if not collection:
                 raise ValueError(f"Collection not found: {collection_id}")
 
+            # set collection id for the item
             item.collection = collection.id 
+
             # Add item to collection and update extent basd on items
             collection.add_item(item)
             collection.update_extent_from_items()
