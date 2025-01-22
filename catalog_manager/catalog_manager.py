@@ -99,7 +99,6 @@ class CatalogManager:
         self.catalog.describe()
         return 
     
-
     def get_children(self):
         return self.catalog.get_children()
     
@@ -152,7 +151,7 @@ class CatalogManager:
             item = factory.create_item(data_path, **kwargs)
             
             # Find the collection and add the item
-            collection = self._find_collection(collection_id)
+            collection = self.get_collection_by_id(collection_id)
 
             if not collection:
                 raise ValueError(f"Collection not found: {collection_id}")
@@ -170,14 +169,161 @@ class CatalogManager:
         except ValueError as e:
             raise ValueError(f"Error creating item: {str(e)}")
 
-    def update_all_collection_extents(self) -> None:
+    def remove_collection(self, collection_id: str) -> None:
+        """Remove a collection from the catalog by ID"""
+        collection = self.get_collection_by_id(collection_id)
+        if collection:
+            self.catalog.remove_child(collection)
+        else:
+            raise ValueError(f"Collection not found: {collection_id}")
+        return
+
+    def remove_item_from_collection(self, collection_id: str, item_id: str) -> None:
+        """Remove an item from a collection by ID"""
+        collection = self.get_collection_by_id(collection_id)
+        if not collection:
+            raise ValueError(f"Collection not found: {collection_id}")
+        
+        item = collection.get_item(item_id)
+        if item:
+            collection.remove_item(item)
+            # Update collection extent after removing item
+            collection.update_extent_from_items()
+        else:
+            raise ValueError(f"Item not found: {item_id} in collection {collection_id}")
+        return
+
+    def update_item_properties(self, 
+                             collection_id: str, 
+                             item_id: str, 
+                             properties: Dict) -> None:
+        """
+        Update properties of a specific item in a collection
+        
+        Args:
+            collection_id (str): ID of the collection containing the item
+            item_id (str): ID of the item to update
+            properties (Dict): Dictionary of properties to update/add
+        """
+        collection = self.get_collection_by_id(collection_id)
+        if not collection:
+            raise ValueError(f"Collection not found: {collection_id}")
+        
+        item = collection.get_item(item_id)
+        if not item:
+            raise ValueError(f"Item not found: {item_id}")
+        
+        # Update existing properties and add new ones
+        for key, value in properties.items():
+            item.properties[key] = value
+        
+        return
+    
+    def remove_item_properties(self,
+                             collection_id: str,
+                             item_id: str,
+                             property_keys: List[str]) -> None:
+        """
+        Remove specified properties from an item
+        
+        Args:
+            collection_id (str): ID of the collection containing the item
+            item_id (str): ID of the item to update
+            property_keys (List[str]): List of property keys to remove
+        """
+        collection = self.get_collection_by_id(collection_id)
+        if not collection:
+            raise ValueError(f"Collection not found: {collection_id}")
+        
+        item = collection.get_item(item_id)
+        if not item:
+            raise ValueError(f"Item not found: {item_id}")
+        
+        for key in property_keys:
+            if key in item.properties:
+                del item.properties[key]
+        
+        return
+
+    def update_collection_items_properties(self,
+                                         collection_id: str,
+                                         properties: Dict,
+                                         filter_fn: Optional[typing.Callable] = None) -> None:
+        """
+        Update properties for all items in a collection, optionally filtered
+        
+        Args:
+            collection_id (str): ID of the collection
+            properties (Dict): Dictionary of properties to update/add
+            filter_fn (Callable): Optional function that takes an item and returns
+                                bool indicating if the item should be updated
+        """
+        collection = self.get_collection_by_id(collection_id)
+        if not collection:
+            raise ValueError(f"Collection not found: {collection_id}")
+        
+        for item in collection.get_items():
+            if filter_fn is None or filter_fn(item):
+                for key, value in properties.items():
+                    item.properties[key] = value
+        
+        return
+
+    def remove_collection_items_properties(self,
+                                         collection_id: str,
+                                         property_keys: List[str],
+                                         filter_fn: Optional[typing.Callable] = None) -> None:
+        """
+        Remove specified properties from all items in a collection, optionally filtered
+        
+        Args:
+            collection_id (str): ID of the collection
+            property_keys (List[str]): List of property keys to remove
+            filter_fn (Callable): Optional function that takes an item and returns
+                                bool indicating if the item should be updated
+        """
+        collection = self.get_collection_by_id(collection_id)
+        if not collection:
+            raise ValueError(f"Collection not found: {collection_id}")
+        
+        for item in collection.get_items():
+            if filter_fn is None or filter_fn(item):
+                for key in property_keys:
+                    if key in item.properties:
+                        del item.properties[key]
+        
+        return
+
+    def get_item_by_id(self, collection_id: str, item_id: str) -> Optional[pystac.Item]:
+        """Get a specific item from a collection by ID"""
+        collection = self.get_collection_by_id(collection_id)
+        if collection:
+            return collection.get_item(item_id)
+        return None
+
+    # def get_collection_by_id(self, collection_id: str) -> Optional[pystac.Collection]:
+    #     """Get a collection by ID"""
+    #     return self.get_collection_by_id(collection_id)
+
+    def list_collection_items(self, collection_id: str) -> List[pystac.Item]:
+        """Get all items in a collection"""
+        collection = self.get_collection_by_id(collection_id)
+        if collection:
+            return list(collection.get_items())
+        raise ValueError(f"Collection not found: {collection_id}") 
+    
+    def get_supported_data_types(self) -> List[str]:
+        """Get list of supported data types"""
+        return self.item_factory_manager.get_supported_types()
+
+    def _update_all_collection_extents(self) -> None:
         """Update the spatial and temporal extents of all collections"""
         for child in self.catalog.get_children():
             if isinstance(child, pystac.Collection):
                 child.update_extent_from_items()
         return
 
-    def _find_collection(self, collection_id: str) -> Optional[pystac.Collection]:
+    def get_collection_by_id(self, collection_id: str) -> Optional[pystac.Collection]:
         """Find a collection in the catalog by ID"""
         for child in self.catalog.get_children():
             if isinstance(child, pystac.Collection) and child.id == collection_id:
@@ -191,16 +337,12 @@ class CatalogManager:
                 return True
         return False
 
-    def get_supported_data_types(self) -> List[str]:
-        """Get list of supported data types"""
-        return self.item_factory_manager.get_supported_types()
-
     def save_catalog(self, catalog_type : pystac.CatalogType = pystac.CatalogType.SELF_CONTAINED) -> None:
         """Save the catalog to disk"""
         if not isinstance(catalog_type, pystac.CatalogType):
             raise ValueError(f"Invalid catalog type: {catalog_type}, expected pystac.CatalogType")
 
-        self.update_all_collection_extents()
+        self._update_all_collection_extents()
 
         self.catalog.normalize_hrefs(self.catalog_path)
         self.catalog.save(catalog_type=catalog_type)
@@ -310,14 +452,14 @@ def setup_catalog_manager(catalog_path: str, catalog_loader: CatalogDataLoader):
 #         item = factory.create_item(data_path, **kwargs)
 
 #         # Find the collection and add the item
-#         collection = self._find_collection(collection_id)
+#         collection = self.get_collection_by_id(collection_id)
 #         if collection is None:
 #             raise ValueError(f"Collection not found: {collection_id}")
 
 #         collection.add_item(item)
 #         return item
 
-#     def _find_collection(self, collection_id: str) -> Optional[pystac.Collection]:
+#     def get_collection_by_id(self, collection_id: str) -> Optional[pystac.Collection]:
 #         """Find a collection in the catalog by ID"""
 #         # Search through all children of the catalog
 #         for child in self.catalog.get_children():
