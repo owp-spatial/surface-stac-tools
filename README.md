@@ -1,10 +1,8 @@
-# surface-stac
-# Catalog Manager Usage Guide
-
+# **surface-stac**
+# Catalog Manager for initializing and managing a STAC catalog
 This guide explains how to use the provided Python script for managing a STAC catalog, including setting up the initial catalog, adding collections, and adding items to collections.
 
 ## Prerequisites
-
 - **Python Libraries**: Install required dependencies from `requirements.txt` file.
 - **Configuration**: Ensure that the configuration file `config/settings.py` is correctly set up with the following variables:
   - `CATALOG_URI`: Path or URI where the catalog is stored (or will be created).
