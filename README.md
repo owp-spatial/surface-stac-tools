@@ -5,8 +5,6 @@ This guide explains how to use the provided Python script for managing a STAC ca
 
 ## Prerequisites
 
-Before using this script, ensure the following requirements are met:
-
 - **Python Libraries**: Install required dependencies from `requirements.txt` file.
 - **Configuration**: Ensure that the configuration file `config/settings.py` is correctly set up with the following variables:
   - `CATALOG_URI`: Path or URI where the catalog is stored (or will be created).
