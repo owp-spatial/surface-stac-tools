@@ -5,8 +5,6 @@ from abc import ABC, abstractmethod
 import typing
 from typing import Dict, Any, Type
 
-import config.settings as settings
-
 class CatalogDataLoader(ABC):
 
     """

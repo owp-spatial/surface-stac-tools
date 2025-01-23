@@ -3,9 +3,7 @@ import os
 import pystac 
 from pystac import Catalog, Collection, Extent, SpatialExtent, TemporalExtent
 
-import config.settings as settings
 from stac_manager.catalog_extents import GenericExtent
-
 
 # TODO: This needs to be looked at more, but i think this is the right direction 
 class CollectionManager:

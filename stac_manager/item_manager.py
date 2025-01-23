@@ -9,7 +9,6 @@ from datetime import datetime
 import pystac
 from pystac import Item, Asset, MediaType
     
-import config.settings as settings
 from stac_manager.catalog_extents import GenericExtent
 from stac_manager.stac_metadata import MetaDataExtractor, MetaDataExtractorFactory
 

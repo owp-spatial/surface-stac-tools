@@ -15,8 +15,6 @@ from stac_manager.constants import DEFAULT_ROOT_CATALOG_ID, \
         DEFAULT_ROOT_CATALOG_TITLE, \
         DEFAULT_ROOT_CATALOG_DESC
 
-# import config.settings as settings
-
 class CatalogManager:
     def __init__(self, 
                  catalog_path: str, 
