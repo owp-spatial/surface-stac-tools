@@ -11,13 +11,13 @@ import pystac
 from pystac import Catalog, Collection, Item, Asset, MediaType, Extent, SpatialExtent, TemporalExtent
 from pystac.extensions.projection import ProjectionExtension
 
-from catalog_manager.catalog_manager import setup_catalog_manager, CatalogManager
-from catalog_manager.catalog_loader import get_catalog_loader, CatalogDataLoader, CatalogLoaderFactory
+from stac_manager.catalog_manager import setup_catalog_manager, CatalogManager
+from stac_manager.catalog_loader import get_catalog_loader, CatalogDataLoader, CatalogLoaderFactory
 
-from catalog_manager.collection_manager import CollectionManager
-from catalog_manager.item_manager import AbstractItemFactory, ItemFactoryManager, RasterItemFactory, VRTItemFactory
-from catalog_manager.catalog_extents import GenericExtent
-from catalog_manager.stac_metadata import Metadata, MetaDataExtractorFactory
+from stac_manager.collection_manager import CollectionManager
+from stac_manager.item_manager import AbstractItemFactory, ItemFactoryManager, RasterItemFactory, VRTItemFactory
+from stac_manager.catalog_extents import GenericExtent
+from stac_manager.stac_metadata import Metadata, MetaDataExtractorFactory
 
 import config.settings as settings
 

@@ -6,16 +6,16 @@ from typing import Dict, List, Optional
 import pystac 
 from pystac import Catalog, Collection, Item, Asset, MediaType, Extent, SpatialExtent, TemporalExtent
 
-from catalog_manager.catalog_loader import get_catalog_loader, CatalogDataLoader, CatalogLoaderFactory
-from catalog_manager.collection_manager import CollectionManager
-from catalog_manager.item_manager import AbstractItemFactory, ItemFactoryManager, RasterItemFactory, VRTItemFactory
-from catalog_manager.catalog_extents import GenericExtent
-from catalog_manager.stac_metadata import Metadata, MetaDataExtractorFactory
-from catalog_manager.constants import DEFAULT_ROOT_CATALOG_ID, \
+from stac_manager.catalog_loader import get_catalog_loader, CatalogDataLoader, CatalogLoaderFactory
+from stac_manager.collection_manager import CollectionManager
+from stac_manager.item_manager import AbstractItemFactory, ItemFactoryManager, RasterItemFactory, VRTItemFactory
+from stac_manager.catalog_extents import GenericExtent
+from stac_manager.stac_metadata import Metadata, MetaDataExtractorFactory
+from stac_manager.constants import DEFAULT_ROOT_CATALOG_ID, \
         DEFAULT_ROOT_CATALOG_TITLE, \
         DEFAULT_ROOT_CATALOG_DESC
 
-import config.settings as settings
+# import config.settings as settings
 
 class CatalogManager:
     def __init__(self, 
@@ -58,24 +58,6 @@ class CatalogManager:
             catalog_type=pystac.CatalogType.SELF_CONTAINED
         )
         return root_catalog
-    
-    # def _set_catalog_metadata(self, id: Optional[str], title: Optional[str], description: Optional[str]) -> None:
-    #     """Set ID, title, and description if provided or not already set."""
-    #     # Set catalog ID
-    #     if not self.catalog.id and id:
-    #         self.set_catalog_id(id)
-    #     elif not self.catalog.id:
-    #         self.set_catalog_id(DEFAULT_ROOT_CATALOG_ID)
-
-    #     if not self.catalog.title and title:
-    #         self.set_catalog_title(title)
-    #     elif not self.catalog.title:
-    #         self.set_catalog_title(DEFAULT_ROOT_CATALOG_TITLE)
-
-    #     if not self.catalog.description and description:
-    #         self.set_catalog_description(description)
-    #     elif not self.catalog.description:
-    #         self.set_catalog_description(DEFAULT_ROOT_CATALOG_DESC)
     
     def get_catalog(self) -> pystac.Catalog:
         return self.catalog
@@ -173,7 +155,7 @@ class CatalogManager:
         """Remove a collection from the catalog by ID"""
         collection = self.get_collection_by_id(collection_id)
         if collection:
-            self.catalog.remove_child(collection)
+            self.catalog.remove_child(collection_id)
         else:
             raise ValueError(f"Collection not found: {collection_id}")
         return
@@ -186,7 +168,7 @@ class CatalogManager:
         
         item = collection.get_item(item_id)
         if item:
-            collection.remove_item(item)
+            collection.remove_item(item_id)
             # Update collection extent after removing item
             collection.update_extent_from_items()
         else:

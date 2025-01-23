@@ -20,16 +20,10 @@ from pathlib import Path
 import uuid
 
 from shapely.geometry import Polygon, mapping
-from catalog_manager.constants import FILE_EXT_TO_MEDIA_TYPE
+from stac_manager.constants import FILE_EXT_TO_MEDIA_TYPE
 
 # Import extension version
 import rio_stac
-
-# from rio_stac.stac import PROJECTION_EXT_VERSION
-# # Import rio_stac methods
-# from rio_stac.stac import (
-#     get_projection_info
-# )
 
 class Metadata:
     """
