@@ -77,7 +77,17 @@ class STACManager:
         """
         if catalog_id not in self.catalog_managers:
             raise ValueError(f"Catalog with ID '{catalog_id}' does not exist.")
-        
+
+        catalog = self.catalog_managers[catalog_id]
+
+        # Clear all chidren and items
+        catalog.catalog.clear_items() 
+        catalog.catalog.clear_children()
+
+        # resave the removed catalog to disk
+        catalog.save_catalog()
+
+        # remove the catalog from the manager
         del self.catalog_managers[catalog_id]
 
     def describe_catalog(self, catalog_id: str) -> None:
