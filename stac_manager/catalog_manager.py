@@ -1,3 +1,4 @@
+
 import os
 from pathlib import Path
 import typing
@@ -24,6 +25,11 @@ class CatalogManager:
                  catalog_loader: CatalogDataLoader = None,
                  metadata_extractor_factory: MetaDataExtractorFactory = None
                  ):
+        
+        self.id = id
+        self.title = title
+        self.description = description
+
         self.catalog_path = catalog_path
         self.catalog_loader = catalog_loader or CatalogLoaderFactory.create_loader(self.catalog_path)
         # self.catalog_loader = catalog_loader
@@ -35,8 +41,6 @@ class CatalogManager:
         
         self._load_or_create_catalog()
 
-        # set any metadata if provided
-        # self._set_catalog_metadata(id, title, description)
         self.set_catalog_id(id)
         self.set_catalog_title(title)
         self.set_catalog_description(description)
@@ -63,16 +67,19 @@ class CatalogManager:
     def set_catalog_id(self, id: str) -> None:
         if self.catalog and id:
             self.catalog.id = id
+            self.id = id
         return 
     
     def set_catalog_title(self, title: str) -> None:
         if self.catalog and title:
             self.catalog.title = title
+            self.title = title
         return
     
     def set_catalog_description(self, description: str) -> None:
         if self.catalog and description:
             self.catalog.description = description
+            self.description = description
         return
 
     def describe(self) -> None:

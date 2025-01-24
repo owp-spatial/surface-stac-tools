@@ -84,7 +84,7 @@ catalog_manager.add_item_to_collection(
     data_path=settings.TIF_URI_1,
     properties={"priority": 2}
 )
-
+catalog_manager.save_catalog(catalog_type=pystac.CatalogType.SELF_CONTAINED)
 for children in catalog_manager.get_children():
     print(children)
     for item in children.get_all_items():

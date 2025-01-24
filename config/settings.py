@@ -11,11 +11,15 @@ load_dotenv(dotenv_path=ENV_PATH)
 
 DEBUG = os.getenv("DEBUG") == "True"
 BASE_DIR = os.getenv("BASE_DIR")
-CATALOG_DIR = os.getenv("CATALOG_DIR")
+ROOT_STAC_DIR_NAME= os.getenv("ROOT_STAC_DIR_NAME")
+ROOT_STAC_DIR=os.path.join(BASE_DIR, ROOT_STAC_DIR_NAME)
+
+CATALOG_DIR_NAME = os.getenv("CATALOG_DIR_NAME")
+CATALOG_DIR = os.path.join(ROOT_STAC_DIR, CATALOG_DIR_NAME)
+
 ROOT_CATALOG_NAME = os.getenv("ROOT_CATALOG_NAME")
 
-CATALOG_URI = os.path.join(BASE_DIR, CATALOG_DIR, ROOT_CATALOG_NAME)
-# CATALOG_URI = f"{BASE_DIR}/{CATALOG_DIR}/{ROOT_CATALOG_NAME}"
+CATALOG_URI = os.path.join(CATALOG_DIR, ROOT_CATALOG_NAME)
 
 # Name data for the root STAC catalog
 ROOT_CATALOG_ID = "hydrofabric-surfaces"
