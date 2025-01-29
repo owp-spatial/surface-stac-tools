@@ -3,6 +3,7 @@ from os.path import basename
 from pathlib import Path
 import typing
 from typing import Dict, List, Optional, Tuple, Union
+
 from datetime import datetime
 import json
 from hashlib import md5
@@ -16,23 +17,9 @@ from stac_manager.catalog_manager import setup_catalog_manager, CatalogManager
 from stac_manager.catalog_loader import get_catalog_loader, CatalogDataLoader, CatalogLoaderFactory
 from stac_manager.collection_manager import CollectionManager
 from stac_manager.stac_metadata import Metadata, MetaDataExtractorFactory
+from stac_manager.data_models import STACCollectionSource, STACItemSource
 
 import config.settings as settings
-
-@dataclass(init=True)
-class STACCollectionSource:
-    """Class for defining a STAC Data source"""
-    id : Union[str, int]
-    title: str
-    description : str
-
-@dataclass(init=True)
-class STACItemSource:
-    """Class for defining a STAC Data source"""
-    collection_id : Union[str, int]
-    id : Union[str, int]
-    data_path : str
-    properties : Dict[str, Union[str, int, float]]
 
 # List out desired collections to create/update
 collections = [
@@ -57,6 +44,11 @@ DATA_SOURCES = [
     "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_ninth_Topobathy_Hawaii_9428/tiles/ncei19_n19x00_w156x00_2021v1.tif",
     "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_ninth_Topobathy_Hawaii_9428/tiles/ncei19_n19x25_w155x50_2021v1.tif",
     ]
+
+HTML_URLS = [
+    "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_ninth_Topobathy_Hawaii_9428/index.html"
+]
+
 
 # List of STAC Items that will be added to the collections specified above
 items = [
@@ -100,6 +92,14 @@ catalog_manager.describe()
 # ----- Go through list of collections and create the collection -----
 # if it does not exist
 # --------------------------------------------------------------------------------------
+# manager2 = CatalogManager(
+#     catalog_path="https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_ninth_Topobathy_Hawaii_9428/stac/tiles/ncei19_n19x00_w155x75_2021v1.json"
+# )
+# pystac.Catalog.from_file("https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_ninth_Topobathy_Hawaii_9428/stac/tiles/ncei19_n19x00_w155x75_2021v1.json")
+# hawaii_item = pystac.Item.from_file("https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_ninth_Topobathy_Hawaii_9428/stac/tiles/ncei19_n19x00_w155x75_2021v1.json")
+# print(json.dumps(hawaii_item.to_dict(), indent=4))
+
+# manager2.describe()
 
 for collection in collections:
     print(f"Collection:\n > {collection}")

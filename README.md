@@ -1,4 +1,10 @@
 # **surface-stac**
+
+# Installation:
+```bash
+pip install git+https://github.com/owp-spatial/surface-stac-tools.git
+```
+
 # Catalog Manager for initializing and managing a STAC catalog
 This guide explains how to use the provided Python script for managing a STAC catalog, including setting up the initial catalog, adding collections, and adding items to collections.
 
