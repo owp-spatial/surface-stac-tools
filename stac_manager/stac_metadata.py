@@ -329,37 +329,3 @@ class MetaDataExtractorFactory:
         if not extractor_class:
             raise ValueError(f"Unsupported file type: {file_extension}")
         return extractor_class(file_path)
-
-
-# NC_URL = "http://thredds.northwestknowledge.net:8080/thredds/dodsC/NWCSC_INTEGRATED_SCENARIOS_ALL_CLIMATE/bcsd-nmme/dailyForecasts/bcsd_nmme_metdata_NCAR_forecast_was_daily.nc"
-# # # NC_URL = "https://www.ngdc.noaa.gov/thredds/fileServer/crm/cudem/crm_vol9_2023.nc"
-# # # NC_URL = "https://www.ngdc.noaa.gov/thredds/ncml/regional/crescent_city_13_navd88_2010.nc?catalog=https%3A%2F%2Fwww.ngdc.noaa.gov%2Fthredds%2Fcatalog%2Fregional%2Fcatalog.html&dataset=regionalDatasetScan%2Fcrescent_city_13_navd88_2010.nc"
-# # # Open the NetCDF file remotely
-# ds = xr.open_dataset(NC_URL)
-# for key,val in ds.attrs.items():
-#     print(f"{key}\n > '{val}'")
-#     print()
-
-# metadata = NetCDFMetaData(NC_URL)
-# metadata.extract_metadata()
-
-# with xr.open_dataset(NC_URL) as src:
-#     print(src['lat'])
-
-# # TODO: use this to make a test data set for testing NetCDFMetaData class
-# time = np.arange(0, 10)  # 10 time steps
-# lat = np.linspace(-90, 90, 5)  # 5 latitude points
-# lon = np.linspace(-180, 180, 5)  # 5 longitude points
-# data = np.random.random((len(time), len(lat), len(lon)))  # Random data for the variable
-# ds = xr.Dataset(
-#     {
-#         "temperature": (["time", "lat", "lon"], data)  # Create a variable 'temperature'
-#     },
-#     coords={
-#         "time": time,
-#         "lat": lat,
-#         "lon": lon
-#     }
-# )
-# output_path = "path/to/local/netcdf.nc"
-# ds.to_netcdf(output_path)
