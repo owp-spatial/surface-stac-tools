@@ -10,6 +10,9 @@ from stac_manager.stac_metadata import (
     Metadata
 )
 
+# NC_URL = "https://www.ngdc.noaa.gov/thredds/fileServer/crm/cudem/crm_vol9_2023.nc"
+
+
 class TestMetaDataExtractor:
     @pytest.fixture
     def create_test_tif(self):

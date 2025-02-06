@@ -7,7 +7,7 @@ DEFAULT_ROOT_CATALOG_DESC  = f"{DEFAULT_ROOT_CATALOG_ID}-desc"
 
 # mapping common file extensions to PySTAC MediaType enums
 FILE_EXT_TO_MEDIA_TYPE = {
-    ".tif": MediaType.COG,  
+    # ".tif": MediaType.COG,  
     ".cog": MediaType.COG,
     ".fgb": MediaType.FLATGEOBUF,
     ".geojson": MediaType.GEOJSON,
