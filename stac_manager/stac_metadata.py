@@ -317,6 +317,7 @@ class MetaDataExtractorFactory:
     # Add a mapping to associate file extensions with metadata extractors
     _extractor_mapping = {
         ".tif": TIFMetaData,
+        ".tiff" : TIFMetaData,
         ".vrt": VRTMetaData,
         ".nc" : NetCDFMetaData
     }

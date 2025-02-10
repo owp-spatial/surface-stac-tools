@@ -158,6 +158,57 @@ class VRTItemFactory(AbstractItemFactory):
         
         return assets
 
+class NetCDFItemFactory(AbstractItemFactory):
+    """Concrete factory for creating STAC Items from NetCDF data"""
+    
+    def __init__(self, metadata_extractor: MetaDataExtractorFactory):
+        self.metadata_extractor = metadata_extractor
+
+    def create_item(self, data_path: str, **kwargs) -> pystac.Item:
+        extractor = self.metadata_extractor.get_metadata_extractor(data_path)
+        metadata = extractor.extract_metadata()
+        
+        # Create STAC Item
+        item_id = kwargs.get("item_id", self._get_file_name(data_path))
+        
+        item = pystac.Item(
+            id=item_id,
+            geometry=metadata.get('geometry'),
+            bbox=metadata.get('bbox'),
+            stac_extensions=metadata.get('stac_extensions', []),
+            datetime=kwargs.get('datetime', datetime.now()),
+            properties={**kwargs.get('properties', {}), **metadata.get('properties', {})}
+        )
+
+        # add aseets to items
+        assets = self.create_assets(data_path)
+        for asset_key, asset in assets.items():
+            item.add_asset(asset_key, asset)
+
+        return item
+
+
+    def create_assets(self, data_path: str) -> Dict[str, pystac.Asset]:
+        extractor = self.metadata_extractor.get_metadata_extractor(data_path)
+        metadata = extractor.extract_metadata()
+        
+        # Use the filename without extension as the asset key
+        # if not possible, just use the data_path
+        try:
+            asset_key = self._get_file_name(data_path)
+            # asset_key = Path(data_path).stem
+        except Exception as e:
+            asset_key = data_path
+        
+        return {
+            asset_key: pystac.Asset(
+                href=data_path,
+                media_type=metadata.get('media_type'),
+                roles=['data'],
+                title=asset_key  # ooptional, human readable title
+            )
+        }
+
 class ItemFactoryManager:
     """
     Factory manager to create appropriate item factories based on data type.
@@ -166,7 +217,8 @@ class ItemFactoryManager:
     _factory_mapping = {
         "tif": RasterItemFactory,
         "tiff": RasterItemFactory,
-        "vrt": VRTItemFactory
+        "vrt": VRTItemFactory,
+        "nc" : NetCDFItemFactory
     }
 
     def __init__(self, metadata_extractor_factory: MetaDataExtractorFactory):
