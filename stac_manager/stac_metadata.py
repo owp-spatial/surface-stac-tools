@@ -274,17 +274,48 @@ class NetCDFMetaData(MetaDataExtractor):
             return metadata
 
     def get_bbox(self, src: xr.Dataset) -> List[float]:
+            """
+            Attempt to retrieve latitude and longitude variables from a NetCDF file 
+            by trying several common variable names.
+            """
+            lat_names = ["lat", "latitude", "Latitude", "LAT", "y", "Y"]
+            lon_names = ["lon", "longitude", "Longitude", "LON", "x", "X"]
 
-        # TODO: This needs to be improved to handle non lat/lon named dimensions/coordinates 
-        # TODO: This will break on NetCDFs with different dimension names...
-        # assumes that lat and lon are dimension names in the NetCDF file
-        ymin, ymax = src['lat'].min().values, src['lat'].max().values
-        xmin, xmax = src['lon'].min().values, src['lon'].max().values
+            lat_var, lon_var = None, None
 
-        # TODO: confirm this is the correct order
-        bbox = [float(xmin), float(ymin), float(xmax), float(ymax)]
+            # Find the first existing latitude variable
+            for name in lat_names:
+                if name in src.variables:
+                    lat_var = name
+                    break
 
-        return bbox
+            # Find the first existing longitude variable
+            for name in lon_names:
+                if name in src.variables:
+                    lon_var = name
+                    break
+
+            if lat_var is None or lon_var is None:
+                raise ValueError("Could not find latitude and/or longitude variables in the NetCDF file.")
+
+            ymin, ymax = src[lat_var].min().values, src[lat_var].max().values
+            xmin, xmax = src[lon_var].min().values, src[lon_var].max().values
+
+            return [xmin, ymin, xmax, ymax]
+            # return [float(xmin), float(ymin), float(xmax), float(ymax)]
+
+    # def get_bbox(self, src: xr.Dataset) -> List[float]:
+
+    #     # TODO: This needs to be improved to handle non lat/lon named dimensions/coordinates 
+    #     # TODO: This will break on NetCDFs with different dimension names...
+    #     # assumes that lat and lon are dimension names in the NetCDF file
+    #     ymin, ymax = src['lat'].min().values, src['lat'].max().values
+    #     xmin, xmax = src['lon'].min().values, src['lon'].max().values
+
+    #     # TODO: confirm this is the correct order
+    #     bbox = [float(xmin), float(ymin), float(xmax), float(ymax)]
+
+    #     return bbox
 
     def get_footprint(self, bbox: list[float]) -> Dict[str, Any]:
         """
