@@ -298,11 +298,17 @@ class NetCDFMetaData(MetaDataExtractor):
             if lat_var is None or lon_var is None:
                 raise ValueError("Could not find latitude and/or longitude variables in the NetCDF file.")
 
-            ymin, ymax = src[lat_var].min().values, src[lat_var].max().values
-            xmin, xmax = src[lon_var].min().values, src[lon_var].max().values
+            # get the min and max values for the lat and lon variables
+            ymin = float(src[lat_var].min().item())
+            ymax = float(src[lat_var].max().item())
+            xmin = float(src[lon_var].min().item())
+            xmax = float(src[lon_var].max().item())
 
-            # return [xmin, ymin, xmax, ymax]
-            return [float(xmin), float(ymin), float(xmax), float(ymax)]
+            # ymin, ymax = src[lat_var].min().values, src[lat_var].max().values
+            # xmin, xmax = src[lon_var].min().values, src[lon_var].max().values
+
+            return [xmin, ymin, xmax, ymax]
+            # return [float(xmin), float(ymin), float(xmax), float(ymax)]
 
     # def get_bbox(self, src: xr.Dataset) -> List[float]:
 
