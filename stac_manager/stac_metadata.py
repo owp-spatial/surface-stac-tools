@@ -301,8 +301,8 @@ class NetCDFMetaData(MetaDataExtractor):
             ymin, ymax = src[lat_var].min().values, src[lat_var].max().values
             xmin, xmax = src[lon_var].min().values, src[lon_var].max().values
 
-            return [xmin, ymin, xmax, ymax]
-            # return [float(xmin), float(ymin), float(xmax), float(ymax)]
+            # return [xmin, ymin, xmax, ymax]
+            return [float(xmin), float(ymin), float(xmax), float(ymax)]
 
     # def get_bbox(self, src: xr.Dataset) -> List[float]:
 
