@@ -339,12 +339,118 @@ class NetCDFMetaData(MetaDataExtractor):
 
         return mapping(footprint)
 
-    def get_netcdf_attrs(self, src : xr.Dataset) -> dict:
+    def get_netcdf_attrs(self, src: xr.Dataset) -> dict:
         try:
             attrs = src.attrs
-            return attrs
-        except:
+            serializable_attrs = {}
+
+            # function converts numpy types to native python types
+            def coerce_value(value):
+                if isinstance(value, (np.integer, np.floating)):
+                    return value.item()  # convert to native Python int/float
+                elif isinstance(value, np.ndarray):
+                    return value.tolist()  # convert arrays to lists
+                elif isinstance(value, (list, tuple)):
+                    return [coerce_value(v) for v in value]  # recursively convrrt lists/tuples
+                elif isinstance(value, dict):
+                    return {k: coerce_value(v) for k, v in value.items()}  # recursively convert dicts
+                try:
+                    json.dumps(value)  # then check if JSON serializable
+                    return value
+                except (TypeError, OverflowError):
+                    return str(value)  # convert to string if not JSON serializable
+
+            for key, value in attrs.items():
+                serializable_attrs[key] = coerce_value(value)
+
+            return serializable_attrs
+        except Exception:
             return {}
+
+# file_path = "https://www.ngdc.noaa.gov/thredds/dodsC/crm/cudem/crm_vol9_2023.nc"
+#  # Open the NetCDF file remotely
+# with xr.open_dataset(file_path) as src:
+    
+#     bbox = get_bbox(src)
+
+
+# src = xr.open_dataset(file_path)
+# src.variables
+# src
+# get_netcdf_attrs(src)
+
+# def get_netcdf_attrs(src: xr.Dataset) -> dict:
+#     try:
+#         attrs = src.attrs
+#         serializable_attrs = {}
+
+#         # function converts NumPy types to Python native types
+#         def coerce_value(value):
+#             if isinstance(value, (np.integer, np.floating)):
+#                 return value.item()  # convert to native Python int/float
+#             elif isinstance(value, np.ndarray):
+#                 return value.tolist()  # convert arrays to lists
+#             elif isinstance(value, (list, tuple)):
+#                 return [coerce_value(v) for v in value]  # recursively convrrt lists/tuples
+#             elif isinstance(value, dict):
+#                 return {k: coerce_value(v) for k, v in value.items()}  # recursively convert dicts
+#             try:
+#                 json.dumps(value)  # then check if JSON serializable
+#                 return value
+#             except (TypeError, OverflowError):
+#                 return str(value)  # convert to string if not JSON serializable
+
+#         for key, value in attrs.items():
+#             serializable_attrs[key] = coerce_value(value)
+
+#         return serializable_attrs
+#     except Exception:
+#         return {}
+# src.close()
+
+# def get_bbox(src: xr.Dataset) -> List[float]:
+#     """
+#     Attempt to retrieve latitude and longitude variables from a NetCDF file 
+#     by trying several common variable names.
+#     """
+#     lat_names = ["lat", "latitude", "Latitude", "LAT", "y", "Y"]
+#     lon_names = ["lon", "longitude", "Longitude", "LON", "x", "X"]
+
+#     lat_var, lon_var = None, None
+
+#     # Find the first existing latitude variable
+#     for name in lat_names:
+#         print(f"Checking for {name}")
+#         if name in src.variables:
+#             print(f" > Found {name}")  
+#             lat_var = name
+#             break
+
+#     # Find the first existing longitude variable
+#     for name in lon_names:
+#         print(f"Checking for {name}")
+#         if name in src.variables:
+#             print(f" > Found {name}")
+#             lon_var = name
+#             break
+
+#     if lat_var is None or lon_var is None:
+#         raise ValueError("Could not find latitude and/or longitude variables in the NetCDF file.")
+
+#     # get the min and max values for the lat and lon variables
+#     # ymin = float(src[lat_var].min().item())
+#     # ymax = float(src[lat_var].max().item())
+#     # xmin = float(src[lon_var].min().item())
+#     # xmax = float(src[lon_var].max().item())
+#     type(float(src[lat_var].min().values.tolist()))
+#     type(float(src[lat_var].min().values))
+#     type(src[lat_var].min().values.tolist())
+
+#     ymin, ymax = src[lat_var].min().values.tolist(), src[lat_var].max().values.tolist()
+#     xmin, xmax = src[lon_var].min().values.tolist(), src[lon_var].max().values.tolist()
+
+#     # return [xmin, ymin, xmax, ymax]
+#     return [float(xmin), float(ymin), float(xmax), float(ymax)]
 
 # Factory class for metadata extractors
 class MetaDataExtractorFactory:
