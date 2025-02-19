@@ -299,13 +299,13 @@ class NetCDFMetaData(MetaDataExtractor):
                 raise ValueError("Could not find latitude and/or longitude variables in the NetCDF file.")
 
             # get the min and max values for the lat and lon variables
-            ymin = float(src[lat_var].min().item())
-            ymax = float(src[lat_var].max().item())
-            xmin = float(src[lon_var].min().item())
-            xmax = float(src[lon_var].max().item())
+            # ymin = float(src[lat_var].min().item())
+            # ymax = float(src[lat_var].max().item())
+            # xmin = float(src[lon_var].min().item())
+            # xmax = float(src[lon_var].max().item())
 
-            # ymin, ymax = src[lat_var].min().values, src[lat_var].max().values
-            # xmin, xmax = src[lon_var].min().values, src[lon_var].max().values
+            ymin, ymax = src[lat_var].min().values.tolist(), src[lat_var].max().values.tolist()
+            xmin, xmax = src[lon_var].min().values.tolist(), src[lon_var].max().values.tolist()
 
             return [xmin, ymin, xmax, ymax]
             # return [float(xmin), float(ymin), float(xmax), float(ymax)]
