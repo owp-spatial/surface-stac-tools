@@ -1,7 +1,7 @@
 import pytest
 import tempfile
 import os
-from stac_manager.item_manager import ItemFactoryManager, RasterItemFactory, VRTItemFactory, NetCDFItemFactory
+from stac_manager.item_manager import ItemFactoryManager, RasterItem, VRTItem, NetCDFItem
 from stac_manager.stac_metadata import MetaDataExtractorFactory
 
 class TestItemFactoryManager:
@@ -16,19 +16,19 @@ class TestItemFactoryManager:
         assert set(supported_types) == {'tif', 'tiff', 'vrt', 'nc'}
 
     def test_get_raster_item_factory(self, item_factory_manager):
-        """Test getting a RasterItemFactory for TIF files"""
+        """Test getting a RasterItem for TIF files"""
         factory = item_factory_manager.get_item_factory('tif')
-        assert isinstance(factory, RasterItemFactory)
+        assert isinstance(factory, RasterItem)
 
     def test_get_vrt_item_factory(self, item_factory_manager):
-        """Test getting a VRTItemFactory for VRT files"""
+        """Test getting a VRTItem for VRT files"""
         factory = item_factory_manager.get_item_factory('vrt')
-        assert isinstance(factory, VRTItemFactory)
+        assert isinstance(factory, VRTItem)
 
     def test_get_netcdf_item_factory(self, item_factory_manager):
-        """Test getting a NetCDFItemFactory for NetCDF files"""
+        """Test getting a NetCDFItem for NetCDF files"""
         factory = item_factory_manager.get_item_factory('nc')
-        assert isinstance(factory, NetCDFItemFactory)
+        assert isinstance(factory, NetCDFItem)
 
     def test_unsupported_type_raises_error(self, item_factory_manager):
         """Test that an unsupported file type raises a ValueError"""

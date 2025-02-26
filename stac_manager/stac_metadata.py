@@ -231,6 +231,132 @@ class VRTMetaData(MetaDataExtractor):
         """
         return src.files if src.files else []
 
+    
+
+
+# 
+# VRTMetaData
+
+# data = {
+#     "domain": "puerto-rico-virgin-islands",
+#     "region": "puerto-rico",
+#     "source": "ncei_cudem",
+#     "resolution": "10m",
+#     "has_topo": "True",
+#     "has_bathymetry": "True",
+#     "horizontal_crs": "NAD83",
+#     "vertical_datum": "PRVD02",
+#     "vertical_datum_conversion": "MSL = PRVD02 - 0.01583",
+#     "priority": 2,
+#     "source_url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_third_Topobathy_PuertoRico_9524/index.html",
+#     "asset_urls": json.loads("[\"https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_third_Topobathy_PuertoRico_9524/stac/catalog.json\", \"https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_third_Topobathy_PuertoRico_9524/NCEI_third_Topobathy_PuertoRico_EPSG-4269.vrt\"]")
+#   }
+
+# asset_urls = data.get("asset_urls")
+# url = [url for url in asset_urls if "catalog.json" in url][0]
+
+# url 
+
+# catalog = pystac.Catalog.from_file(url)
+# items = [i for i in catalog.get_all_items()]
+
+# coords = [i.geometry.get("coordinates", []) for i in items]
+
+# points = []
+# for geoms in coords:
+#     for pt_list in geoms:
+#         for pt in pt_list:
+#             points.append(pt)
+
+# polygon = Polygon(points)
+
+# footprint = mapping(polygon)
+# bbox = list(polygon.bounds)
+# items[0].get_links()
+
+# Metadata(bbox=bbox, 
+
+#     geometry=footprint, 
+#     items=items, 
+#     media_type=media_type, 
+#     properties=properties, 
+#     stac_extensions=stac_extensions)
+
+# print(json.dumps(item.to_dict(), indent = 2))
+
+# Concrete Class for STAC catalog JSON Files
+class STACCatalogJSONMetaData(MetaDataExtractor):
+
+
+
+    """
+    Metadata extraction for STAC Catalog JSON files
+    """
+
+    def extract_metadata(self):
+        """
+        Extract metadata from a VRT file.
+        Returns: (bbox, mapping(footprint), items_list)
+        """
+        properties = {} 
+        stac_extensions = []
+        media_type = self.get_media_type(self.file_path)
+
+        # Add projection extension properties            
+        proj_ext_props = self.get_proj_ext_properties(src)
+        properties.update(proj_ext_props)
+
+        # add the projection extension schema path
+        stac_extensions.append(self.get_proj_ext_path())
+
+        catalog = pystac.Catalog.from_file(self.file_path)
+        items = [i for i in catalog.get_all_items()]
+        
+        polygon = self._get_polygon(items)
+
+        bbox = self.get_bbox(polygon)
+        footprint = self.get_footprint(polygon)
+
+        metadata = Metadata(bbox=bbox, 
+            geometry=footprint, 
+            media_type=media_type, 
+            properties=properties, 
+            stac_extensions=stac_extensions
+            )
+        return metadata
+
+    def _get_coords(self, items):
+        coords = [i.geometry.get("coordinates", []) for i in items]
+
+        return coords
+    
+    def _get_polygon(self, items):
+        coords = self._get_coords(items)
+
+        points = []
+        for geoms in coords:
+            for pt_list in geoms:
+                for pt in pt_list:
+                    points.append(pt)
+
+        polygon = Polygon(points)
+
+        return polygon 
+    
+
+    def get_bbox(self,  polygon : Polygon) -> List[float]:
+        bbox = list(polygon.bounds)
+        return bbox 
+        
+    def get_footprint(self,  polygon : Polygon) -> Dict[str, Any]:
+        """
+        Helper method to compute the footprint of the VRT file.
+        """
+        
+        footprint = mapping(polygon)
+
+        return footprint
+
 # Concrete Class for NetCDF Files
 class NetCDFMetaData(MetaDataExtractor):
     """
@@ -298,30 +424,11 @@ class NetCDFMetaData(MetaDataExtractor):
             if lat_var is None or lon_var is None:
                 raise ValueError("Could not find latitude and/or longitude variables in the NetCDF file.")
 
-            # get the min and max values for the lat and lon variables
-            # ymin = float(src[lat_var].min().item())
-            # ymax = float(src[lat_var].max().item())
-            # xmin = float(src[lon_var].min().item())
-            # xmax = float(src[lon_var].max().item())
-
             ymin, ymax = src[lat_var].min().values.tolist(), src[lat_var].max().values.tolist()
             xmin, xmax = src[lon_var].min().values.tolist(), src[lon_var].max().values.tolist()
 
             # return [xmin, ymin, xmax, ymax]
             return [float(xmin), float(ymin), float(xmax), float(ymax)]
-
-    # def get_bbox(self, src: xr.Dataset) -> List[float]:
-
-    #     # TODO: This needs to be improved to handle non lat/lon named dimensions/coordinates 
-    #     # TODO: This will break on NetCDFs with different dimension names...
-    #     # assumes that lat and lon are dimension names in the NetCDF file
-    #     ymin, ymax = src['lat'].min().values, src['lat'].max().values
-    #     xmin, xmax = src['lon'].min().values, src['lon'].max().values
-
-    #     # TODO: confirm this is the correct order
-    #     bbox = [float(xmin), float(ymin), float(xmax), float(ymax)]
-
-    #     return bbox
 
     def get_footprint(self, bbox: list[float]) -> Dict[str, Any]:
         """
@@ -367,93 +474,10 @@ class NetCDFMetaData(MetaDataExtractor):
         except Exception:
             return {}
 
-# file_path = "https://www.ngdc.noaa.gov/thredds/dodsC/crm/cudem/crm_vol9_2023.nc"
-#  # Open the NetCDF file remotely
-# with xr.open_dataset(file_path) as src:
-    
-#     bbox = get_bbox(src)
-
-
-# src = xr.open_dataset(file_path)
-# src.variables
-# src
-# get_netcdf_attrs(src)
-
-# def get_netcdf_attrs(src: xr.Dataset) -> dict:
-#     try:
-#         attrs = src.attrs
-#         serializable_attrs = {}
-
-#         # function converts NumPy types to Python native types
-#         def coerce_value(value):
-#             if isinstance(value, (np.integer, np.floating)):
-#                 return value.item()  # convert to native Python int/float
-#             elif isinstance(value, np.ndarray):
-#                 return value.tolist()  # convert arrays to lists
-#             elif isinstance(value, (list, tuple)):
-#                 return [coerce_value(v) for v in value]  # recursively convrrt lists/tuples
-#             elif isinstance(value, dict):
-#                 return {k: coerce_value(v) for k, v in value.items()}  # recursively convert dicts
-#             try:
-#                 json.dumps(value)  # then check if JSON serializable
-#                 return value
-#             except (TypeError, OverflowError):
-#                 return str(value)  # convert to string if not JSON serializable
-
-#         for key, value in attrs.items():
-#             serializable_attrs[key] = coerce_value(value)
-
-#         return serializable_attrs
-#     except Exception:
-#         return {}
-# src.close()
-
-# def get_bbox(src: xr.Dataset) -> List[float]:
-#     """
-#     Attempt to retrieve latitude and longitude variables from a NetCDF file 
-#     by trying several common variable names.
-#     """
-#     lat_names = ["lat", "latitude", "Latitude", "LAT", "y", "Y"]
-#     lon_names = ["lon", "longitude", "Longitude", "LON", "x", "X"]
-
-#     lat_var, lon_var = None, None
-
-#     # Find the first existing latitude variable
-#     for name in lat_names:
-#         print(f"Checking for {name}")
-#         if name in src.variables:
-#             print(f" > Found {name}")  
-#             lat_var = name
-#             break
-
-#     # Find the first existing longitude variable
-#     for name in lon_names:
-#         print(f"Checking for {name}")
-#         if name in src.variables:
-#             print(f" > Found {name}")
-#             lon_var = name
-#             break
-
-#     if lat_var is None or lon_var is None:
-#         raise ValueError("Could not find latitude and/or longitude variables in the NetCDF file.")
-
-#     # get the min and max values for the lat and lon variables
-#     # ymin = float(src[lat_var].min().item())
-#     # ymax = float(src[lat_var].max().item())
-#     # xmin = float(src[lon_var].min().item())
-#     # xmax = float(src[lon_var].max().item())
-#     type(float(src[lat_var].min().values.tolist()))
-#     type(float(src[lat_var].min().values))
-#     type(src[lat_var].min().values.tolist())
-
-#     ymin, ymax = src[lat_var].min().values.tolist(), src[lat_var].max().values.tolist()
-#     xmin, xmax = src[lon_var].min().values.tolist(), src[lon_var].max().values.tolist()
-
-#     # return [xmin, ymin, xmax, ymax]
-#     return [float(xmin), float(ymin), float(xmax), float(ymax)]
-
 # Factory class for metadata extractors
 class MetaDataExtractorFactory:
+
+
     """
     Factory to create appropriate metadata extractors based on file type.
     """

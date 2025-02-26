@@ -15,7 +15,7 @@ from stac_manager.catalog_manager import setup_catalog_manager, CatalogManager
 from stac_manager.catalog_loader import get_catalog_loader, CatalogDataLoader, CatalogLoaderFactory
 
 from stac_manager.collection_manager import CollectionManager
-from stac_manager.item_manager import AbstractItemFactory, ItemFactoryManager, RasterItemFactory, VRTItemFactory
+from stac_manager.item_manager import AbstractItem, ItemFactoryManager, RasterItem, VRTItem
 from stac_manager.catalog_extents import GenericExtent
 from stac_manager.stac_metadata import Metadata, MetaDataExtractorFactory
 

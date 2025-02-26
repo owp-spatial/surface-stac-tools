@@ -9,7 +9,7 @@ from pystac import Catalog, Collection, Item, Asset, MediaType, Extent, SpatialE
 
 from stac_manager.catalog_loader import get_catalog_loader, CatalogDataLoader, CatalogLoaderFactory
 from stac_manager.collection_manager import CollectionManager
-from stac_manager.item_manager import AbstractItemFactory, ItemFactoryManager, RasterItemFactory, VRTItemFactory
+from stac_manager.item_manager import AbstractItem, ItemFactoryManager, RasterItem, VRTItem
 from stac_manager.catalog_extents import GenericExtent
 from stac_manager.stac_metadata import Metadata, MetaDataExtractorFactory
 from stac_manager.constants import DEFAULT_ROOT_CATALOG_ID, \
@@ -32,7 +32,6 @@ class CatalogManager:
 
         self.catalog_path = catalog_path
         self.catalog_loader = catalog_loader or CatalogLoaderFactory.create_loader(self.catalog_path)
-        # self.catalog_loader = catalog_loader
         self.catalog = None
         
         # Initialize factories
@@ -288,10 +287,6 @@ class CatalogManager:
             return collection.get_item(item_id)
         return None
 
-    # def get_collection_by_id(self, collection_id: str) -> Optional[pystac.Collection]:
-    #     """Get a collection by ID"""
-    #     return self.get_collection_by_id(collection_id)
-
     def list_collection_items(self, collection_id: str) -> List[pystac.Item]:
         """Get all items in a collection"""
         collection = self.get_collection_by_id(collection_id)
@@ -346,124 +341,3 @@ def setup_catalog_manager(catalog_path: str, catalog_loader: CatalogDataLoader):
     )
     
     return catalog_manager
-
-# class CatalogManager:
-
-#     def __init__(self, 
-#                  catalog_path :str, 
-#                  catalog_loader : CatalogDataLoader,
-#                  metadata_extractor_factory: MetaDataExtractorFactory = None
-#                  ):
-#         self.catalog_path = catalog_path
-#         self.catalog_loader = catalog_loader
-#         self.catalog = None
-        
-#         # initialize factories
-#         self.metadata_extractor_factory = metadata_extractor_factory or MetaDataExtractorFactory()
-#         self._item_factories = self._init_item_factories()
-        
-#         # Load or create catalog
-#         self._load_or_create_catalog()
-
-#     def _init_item_factories(self) -> Dict[str, AbstractItemFactory]:
-#         """Initialize the item factories for different data types"""
-#         return {
-#             'raster': RasterItemFactory(self.metadata_extractor_factory),
-#             'vrt': VRTItemFactory(self.metadata_extractor_factory)
-#         }
-    
-#     # Initializes catalog (Loads or creates catalog)
-#     def _load_or_create_catalog(self) -> None:
-
-#         try:
-#             self.catalog = self.catalog_loader.load_catalog()
-#         except:
-#             self.catalog = self._create_root_catalog()
-        
-#         return 
-                    
-#     def _create_root_catalog(self) -> pystac.Catalog:
-#         root_catalog_id   = "root-catalog"
-#         root_catalog_desc = "STAC Root Catalog description" 
-#         root_catalog      = pystac.Catalog(
-#             id=root_catalog_id, 
-#             description=root_catalog_desc,
-#             href=self.catalog_path
-#             )
-#         return root_catalog
-    
-#     def get_catalog(self) -> pystac.Catalog:
-#         return self.catalog
-    
-#     def add_child_collection(self, 
-#                             collection_id:str, 
-#                             title: str ,
-#                             description : str,
-#                             extent : Extent = None
-#                             ) -> None:
-#         collection = CollectionManager(
-#             collection_id=collection_id,
-#             title=title,
-#             description=description,
-#             extent=extent
-#             )
-#         self.catalog.add_child(collection.get_collection())
-#         return 
-    
-#     def create_item(self, 
-#                     collection_id: str,
-#                     data_type: str,
-#                     data_path: str,
-#                     **kwargs) -> pystac.Item:
-#         """
-#         Create a new STAC Item and add it to the specified collection
-        
-#         Args:
-#             collection_id (str): ID of the collection to add the item to
-#             data_type (str): Type of data ('raster', 'vrt', etc.)
-#             data_path (str): Path to the data file
-#             **kwargs: Additional arguments to pass to the item factory
-        
-#         Returns:
-#             pystac.Item: The created STAC Item
-#         """
-
-#         # validate data type
-#         if data_type not in self._item_factories:
-#             raise ValueError(f"Unsupported data type: {data_type}. Supported types: {list(self._item_factories.keys())}")
-
-#         # Get the appropriate factory
-#         factory = self._item_factories[data_type]
-
-#         # Create the item
-#         item = factory.create_item(data_path, **kwargs)
-
-#         # Find the collection and add the item
-#         collection = self.get_collection_by_id(collection_id)
-#         if collection is None:
-#             raise ValueError(f"Collection not found: {collection_id}")
-
-#         collection.add_item(item)
-#         return item
-
-#     def get_collection_by_id(self, collection_id: str) -> Optional[pystac.Collection]:
-#         """Find a collection in the catalog by ID"""
-#         # Search through all children of the catalog
-#         for child in self.catalog.get_children():
-#             if isinstance(child, pystac.Collection) and child.id == collection_id:
-#                 return child
-#         return None
-
-#     def register_item_factory(self, data_type: str, factory: AbstractItemFactory) -> None:
-#         """
-#         Register a new item factory for a specific data type
-        
-#         Args:
-#             data_type (str): The type of data this factory handles
-#             factory (AbstractItemFactory): The factory instance
-#         """
-#         self._item_factories[data_type] = factory
-
-#     def get_supported_data_types(self) -> List[str]:
-#         """Get a list of supported data types"""
-#         return list(self._item_factories.keys())

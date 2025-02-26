@@ -12,7 +12,7 @@ from pystac import Item, Asset, MediaType
 from stac_manager.catalog_extents import GenericExtent
 from stac_manager.stac_metadata import MetaDataExtractor, MetaDataExtractorFactory
 
-class AbstractItemFactory(ABC):
+class AbstractItem(ABC):
 
     @abstractmethod
     def create_item(self, data_path : str, **kwargs) -> pystac.Item:
@@ -29,7 +29,7 @@ class AbstractItemFactory(ABC):
         # return Path(data_path).stem
         return basename(data_path).split(".")[0]
 
-class RasterItemFactory(AbstractItemFactory):
+class RasterItem(AbstractItem):
     """Concrete factory for creating STAC Items from Raster data"""
 
     def __init__(self, metadata_extractor: MetaDataExtractorFactory):
@@ -83,7 +83,7 @@ class RasterItemFactory(AbstractItemFactory):
             )
         }
     
-class VRTItemFactory(AbstractItemFactory):
+class VRTItem(AbstractItem):
     """Concrete factory for creating STAC Items from VRT data"""
     
     def __init__(self, metadata_extractor: MetaDataExtractorFactory):
@@ -158,7 +158,7 @@ class VRTItemFactory(AbstractItemFactory):
         
         return assets
 
-class NetCDFItemFactory(AbstractItemFactory):
+class NetCDFItem(AbstractItem):
     """Concrete factory for creating STAC Items from NetCDF data"""
     
     def __init__(self, metadata_extractor: MetaDataExtractorFactory):
@@ -215,10 +215,10 @@ class ItemFactoryManager:
     Similar pattern to MetaDataExtractorFactory.
     """
     _factory_mapping = {
-        "tif": RasterItemFactory,
-        "tiff": RasterItemFactory,
-        "vrt": VRTItemFactory,
-        "nc" : NetCDFItemFactory
+        "tif": RasterItem,
+        "tiff": RasterItem,
+        "vrt": VRTItem,
+        "nc" : NetCDFItem
     }
 
     def __init__(self, metadata_extractor_factory: MetaDataExtractorFactory):
@@ -229,7 +229,7 @@ class ItemFactoryManager:
         """Register a new factory class for a data type"""
         cls._factory_mapping[data_type] = factory_class
 
-    def get_item_factory(self, data_type: str) -> AbstractItemFactory:
+    def get_item_factory(self, data_type: str) -> AbstractItem:
         """
         Get the appropriate item factory for the given data type.
         
@@ -237,7 +237,7 @@ class ItemFactoryManager:
             data_type (str): The type of data to create items for
             
         Returns:
-            AbstractItemFactory: An instance of the appropriate item factory
+            AbstractItem: An instance of the appropriate item factory
             
         Raises:
             ValueError: If the data type is not supported
