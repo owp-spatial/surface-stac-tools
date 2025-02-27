@@ -127,7 +127,8 @@ class CatalogManager:
             None
         """
         # Infer data type from file extension
-        data_type = Path(data_path).suffix.lower().lstrip('.')
+        data_type = Path(data_path).suffix.lower()
+        # data_type = Path(data_path).suffix.lower().lstrip('.')
         
         try:
             # Get the appropriate factory

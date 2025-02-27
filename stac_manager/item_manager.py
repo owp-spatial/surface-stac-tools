@@ -10,7 +10,7 @@ import pystac
 from pystac import Item, Asset, MediaType
     
 from stac_manager.catalog_extents import GenericExtent
-from stac_manager.stac_metadata import MetaDataExtractor, MetaDataExtractorFactory
+from stac_manager.stac_metadata import Metadata, MetaDataExtractor, MetaDataExtractorFactory
 
 class AbstractItem(ABC):
 
@@ -20,7 +20,7 @@ class AbstractItem(ABC):
         pass
 
     @abstractmethod
-    def create_assets(self, data_path : str) -> Dict[str, pystac.Asset]:
+    def create_assets(self, data_path : str, metadata : Metadata) -> Dict[str, pystac.Asset]:
         """Create assets for the given STAC Item"""
         pass
 
@@ -50,27 +50,23 @@ class RasterItem(AbstractItem):
             stac_extensions=metadata.get('stac_extensions', []),
             datetime=kwargs.get('datetime', datetime.now()),
             properties={**kwargs.get('properties', {}), **metadata.get('properties', {})}
-            # properties=metadata.get('properties', {})
-            # properties=kwargs.get('properties', {})
         )
 
         # add aseets to items
-        assets = self.create_assets(data_path)
+        assets = self.create_assets(data_path, metadata)
+        # assets = self.create_assets(data_path)
         for asset_key, asset in assets.items():
             item.add_asset(asset_key, asset)
 
         return item
 
 
-    def create_assets(self, data_path: str) -> Dict[str, pystac.Asset]:
-        extractor = self.metadata_extractor.get_metadata_extractor(data_path)
-        metadata = extractor.extract_metadata()
+    def create_assets(self, data_path: str, metadata : Metadata) -> Dict[str, pystac.Asset]:
         
         # Use the filename without extension as the asset key
         # if not possible, just use the data_path
         try:
             asset_key = self._get_file_name(data_path)
-            # asset_key = Path(data_path).stem
         except Exception as e:
             asset_key = data_path
         
@@ -93,11 +89,9 @@ class VRTItem(AbstractItem):
         # Extract metadata using the VRT-specific extractor
         extractor = self.metadata_extractor.get_metadata_extractor(data_path)
         metadata = extractor.extract_metadata()
-        # print(f"metadata: {metadata}")
         
         # Create STAC Item
         item_id = kwargs.get("item_id", self._get_file_name(data_path))
-        # item_id = kwargs.get('item_id', str(uuid.uuid4()))
         
         # Create item with VRT-specific properties
         properties = metadata.get('properties', {})
@@ -112,19 +106,16 @@ class VRTItem(AbstractItem):
             stac_extensions=metadata.get('stac_extensions', []),
             datetime=kwargs.get('datetime', datetime.now()),
             properties={**kwargs.get('properties', {}), **properties} 
-            # properties=properties
         )
         
         # Add assets to item
-        assets = self.create_assets(data_path)
+        assets = self.create_assets(data_path, metadata)
         for asset_key, asset in assets.items():
             item.add_asset(asset_key, asset)
             
         return item
 
-    def create_assets(self, data_path: str) -> Dict[str, pystac.Asset]:
-        extractor = self.metadata_extractor.get_metadata_extractor(data_path)
-        metadata = extractor.extract_metadata()
+    def create_assets(self, data_path: str, metadata : Metadata) -> Dict[str, pystac.Asset]:
         
         assets = {}
         
@@ -158,6 +149,66 @@ class VRTItem(AbstractItem):
         
         return assets
 
+class CatalogJsonItem(AbstractItem):
+    """Concrete factory for creating STAC Items from an external STAC catalog.json"""
+    
+    def __init__(self, metadata_extractor: MetaDataExtractorFactory):
+        self.metadata_extractor = metadata_extractor
+
+    def create_item(self, data_path: str, **kwargs) -> pystac.Item:
+        # Extract metadata using the STAC Catalog JSON -specific extractor
+        extractor = self.metadata_extractor.get_metadata_extractor(data_path)
+        metadata  = extractor.extract_metadata()
+        
+        # Create STAC Item
+        item_id = metadata.get('id', self._get_file_name(data_path))
+        
+        # Create item with STAC Catalog JSON specific properties
+        properties = metadata.get('properties', {})
+    
+        item = pystac.Item(
+            id=item_id,
+            geometry=metadata.get('geometry'),
+            bbox=metadata.get('bbox'),
+            stac_extensions=metadata.get('stac_extensions', []),
+            datetime=kwargs.get('datetime', datetime.now()),
+            properties={**kwargs.get('properties', {}), **properties} 
+        )
+
+        # Add assets to item
+        assets = self.create_assets(data_path, metadata)
+        for asset_key, asset in assets.items():
+            item.add_asset(asset_key, asset)
+            
+        return item
+
+    def create_assets(self, data_path: str, metadata : Metadata) -> Dict[str, pystac.Asset]:
+        
+        assets = {}
+        assets['stac_catalog'] = pystac.Asset(
+            href=data_path,
+            media_type=metadata.get('media_type'),
+            roles=['data', 'stac_catalog']
+        )
+
+        # Add source files as separate assets
+        stac_items = metadata.get('items', [])
+
+        for idx, source_item in enumerate(stac_items):
+            for asset_key, asset in source_item.assets.items():
+                assets[asset_key] = asset
+
+                # media_type = MetaDataExtractor.get_media_type(asset.href)
+                # assets[asset_key] = Asset(
+                #     href= asset.href,
+                #     media_type=media_type,
+                #     roles=['source'],
+                #     title=f'Source {asset_key}',
+                #     description=f'Source file {asset_key} referenced in STAC catalog.json'
+                # ) 
+                
+        return assets
+
 class NetCDFItem(AbstractItem):
     """Concrete factory for creating STAC Items from NetCDF data"""
     
@@ -181,16 +232,14 @@ class NetCDFItem(AbstractItem):
         )
 
         # add aseets to items
-        assets = self.create_assets(data_path)
+        assets = self.create_assets(data_path, metadata)
         for asset_key, asset in assets.items():
             item.add_asset(asset_key, asset)
 
         return item
 
 
-    def create_assets(self, data_path: str) -> Dict[str, pystac.Asset]:
-        extractor = self.metadata_extractor.get_metadata_extractor(data_path)
-        metadata = extractor.extract_metadata()
+    def create_assets(self, data_path: str, metadata : Metadata) -> Dict[str, pystac.Asset]:
         
         # Use the filename without extension as the asset key
         # if not possible, just use the data_path
@@ -215,10 +264,12 @@ class ItemFactoryManager:
     Similar pattern to MetaDataExtractorFactory.
     """
     _factory_mapping = {
-        "tif": RasterItem,
-        "tiff": RasterItem,
-        "vrt": VRTItem,
-        "nc" : NetCDFItem
+        ".tif": RasterItem,
+        ".tiff": RasterItem,
+        ".vrt": VRTItem,
+        ".nc" : NetCDFItem,
+        ".json" : CatalogJsonItem
+
     }
 
     def __init__(self, metadata_extractor_factory: MetaDataExtractorFactory):

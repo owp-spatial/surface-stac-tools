@@ -11,7 +11,7 @@ from enum import Enum
 import warnings 
 
 
-from shapely.geometry import Polygon, mapping
+from shapely.geometry import Polygon, MultiPolygon, mapping
 import rasterio
 from rasterio.crs import CRS
 from rasterio.transform import from_bounds
@@ -235,7 +235,7 @@ class VRTMetaData(MetaDataExtractor):
 
 
 # 
-# VRTMetaData
+# # VRTMetaData
 
 # data = {
 #     "domain": "puerto-rico-virgin-islands",
@@ -260,7 +260,10 @@ class VRTMetaData(MetaDataExtractor):
 # catalog = pystac.Catalog.from_file(url)
 # items = [i for i in catalog.get_all_items()]
 
+# print(json.dumps(catalog.to_dict(), indent=2))
+
 # coords = [i.geometry.get("coordinates", []) for i in items]
+
 
 # points = []
 # for geoms in coords:
@@ -272,7 +275,6 @@ class VRTMetaData(MetaDataExtractor):
 
 # footprint = mapping(polygon)
 # bbox = list(polygon.bounds)
-# items[0].get_links()
 
 # Metadata(bbox=bbox, 
 
@@ -285,9 +287,7 @@ class VRTMetaData(MetaDataExtractor):
 # print(json.dumps(item.to_dict(), indent = 2))
 
 # Concrete Class for STAC catalog JSON Files
-class STACCatalogJSONMetaData(MetaDataExtractor):
-
-
+class CatalogJsonMetaData(MetaDataExtractor):
 
     """
     Metadata extraction for STAC Catalog JSON files
@@ -303,7 +303,7 @@ class STACCatalogJSONMetaData(MetaDataExtractor):
         media_type = self.get_media_type(self.file_path)
 
         # Add projection extension properties            
-        proj_ext_props = self.get_proj_ext_properties(src)
+        proj_ext_props = self.get_proj_ext_properties(self.file_path)
         properties.update(proj_ext_props)
 
         # add the projection extension schema path
@@ -319,7 +319,9 @@ class STACCatalogJSONMetaData(MetaDataExtractor):
 
         metadata = Metadata(bbox=bbox, 
             geometry=footprint, 
-            media_type=media_type, 
+            media_type=media_type,
+            id=catalog.id,
+            items=items, 
             properties=properties, 
             stac_extensions=stac_extensions
             )
@@ -486,7 +488,8 @@ class MetaDataExtractorFactory:
         ".tif": TIFMetaData,
         ".tiff" : TIFMetaData,
         ".vrt": VRTMetaData,
-        ".nc" : NetCDFMetaData
+        ".nc" : NetCDFMetaData,
+        ".json" : CatalogJsonMetaData
     }
 
     @staticmethod

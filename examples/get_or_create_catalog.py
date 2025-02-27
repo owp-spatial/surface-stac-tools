@@ -20,8 +20,24 @@ from stac_manager.stac_metadata import Metadata, MetaDataExtractorFactory
 from stac_manager.data_models import STACCollectionSource, STACItemSource
 
 import config.settings as settings
+import json  
 
-# List out desired collections to create/update
+# Example data record that can be used for testing
+data = {
+    "domain": "puerto-rico-virgin-islands",
+    "region": "puerto-rico",
+    "source": "ncei_cudem",
+    "resolution": "10m",
+    "has_topo": "True",
+    "has_bathymetry": "True",
+    "horizontal_crs": "NAD83",
+    "vertical_datum": "PRVD02",
+    "vertical_datum_conversion": "MSL = PRVD02 - 0.01583",
+    "priority": 2,
+    "source_url": "https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_third_Topobathy_PuertoRico_9524/index.html",
+    "asset_urls": json.loads("[\"https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_third_Topobathy_PuertoRico_9524/stac/catalog.json\", \"https://noaa-nos-coastal-lidar-pds.s3.amazonaws.com/dem/NCEI_third_Topobathy_PuertoRico_9524/NCEI_third_Topobathy_PuertoRico_EPSG-4269.vrt\"]")
+  }
+
 collections = [
         STACCollectionSource(
             id = "conus",
